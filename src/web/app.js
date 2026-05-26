@@ -561,10 +561,12 @@ async function findLatestIgmFolder(offlineRootHandle, lookbackDays = 1) {
       debugLog.log(`[IGM Discovery] 2D DKE/DKW SSH matches found: ${dateMatches.length}`, 'info');
 
       if (dateMatches.length > 0) {
-        allMatches = allMatches.concat(dateMatches);
-        if (!latestDateLabel) {
-          latestDateLabel = `${y}-${m}-${d}`;
-        }
+        // Use only the newest day that has matches to avoid double-loading mirrored files
+        // that can exist in both today and yesterday folders.
+        allMatches = dateMatches;
+        latestDateLabel = `${y}-${m}-${d}`;
+        debugLog.log(`[IGM Discovery] Using latest matching day only: ${latestDateLabel}`, 'info');
+        break;
       }
     } catch (err) {
       debugLog.log(`[IGM Discovery] ✗ Failed while listing ${pathLabel}: ${String(err.message || err)}`, 'warn');
