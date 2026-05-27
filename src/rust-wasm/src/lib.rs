@@ -230,6 +230,11 @@ pub fn parse_cgma_inhouse(xml_text: String, reverse_sign: bool) -> Result<JsValu
         .filter(|n| n.is_element() && n.tag_name().name() == "TimeSeries")
     {
         let ts_id = ts_node.attribute("id").unwrap_or("").to_uppercase();
+        let ts_code = ts_node.attribute("code").unwrap_or("").to_uppercase();
+
+        if !ts_code.starts_with("NETPOSITIONFORECAST") {
+            continue;
+        }
 
         let mut in_area_id: Option<String> = None;
         let mut out_area_id: Option<String> = None;
