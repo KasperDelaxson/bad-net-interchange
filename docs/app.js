@@ -357,8 +357,6 @@ function fillVersionSelect(versions) {
 }
 
 function parseSshFilename(fileName) {
-  // Capture hours (hh) and minutes (mm) separately so we can enforce the
-  // exact-hour-boundary rule before accepting the file.
   const match = fileName.match(
     /^(?<timestamp>\d{8}T(?<hh>\d{2})(?<mm>\d{2})Z)_2D_(?<area>DKE|DKW)_SSH_(?<version>[A-Za-z0-9-]+)\.zip$/,
   );
@@ -367,20 +365,13 @@ function parseSshFilename(fileName) {
     return null;
   }
 
-  // Only accept SSH files whose timestamp falls on an exact UTC hour boundary
-  // (minutes == "00").  Half-hour snapshots (T:30Z) are intra-hour checks and
-  // do not align with the hourly CGMA schedule periods that start at :00Z.
-  // Accepting both would produce two candidates per hour and introduce an
-  // arbitrary tie-break between :00Z and :30Z values.
-  if (match.groups.mm !== "00") {
-    return null;
-  }
-
-  const { area, version } = match.groups;
+  const { timestamp, area, version, mm } = match.groups;
 
   return {
+    timestamp,
     area,
     version,
+    minutesMark: mm,
   };
 }
 
