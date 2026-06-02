@@ -121,6 +121,27 @@ function saveDebugSetting(enabled) {
   }
 }
 
+const CPH_TS_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Copenhagen",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+function formatTsCopenhagen(utcIso) {
+  if (!utcIso) return "";
+  const d = new Date(utcIso);
+  if (isNaN(d.getTime())) return utcIso;
+  const parts = CPH_TS_FORMATTER.formatToParts(d).reduce((acc, p) => {
+    acc[p.type] = p.value;
+    return acc;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
 function toYmd(date, zeroPad) {
   const y = date.getUTCFullYear();
   const m = date.getUTCMonth() + 1;
@@ -847,7 +868,7 @@ function renderTablesView(rows) {
     const statusClass = `status-${String(row.status).toLowerCase()}`;
 
     tr.innerHTML = `
-      <td>${row.aligned_timestamp}</td>
+      <td>${formatTsCopenhagen(row.aligned_timestamp)}</td>
       <td>${row.ssh_version}</td>
       <td>${Number(row.ssh_net_interchange_mw).toFixed(3)}</td>
       <td>${Number(row.cgma_net_position_mw).toFixed(3)}</td>
@@ -917,7 +938,7 @@ function renderDiffChartsView(rows) {
     window.diffDk1Chart = new Chart(dk1Ctx, {
       ...chartConfig,
       data: {
-        labels: dk1Rows.map(r => r.aligned_timestamp),
+        labels: dk1Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [{
           label: 'Difference (SSH - CGMA)',
           data: dk1Rows.map(r => getDiffMagnitude(r)),
@@ -942,7 +963,7 @@ function renderDiffChartsView(rows) {
     window.diffDk2Chart = new Chart(dk2Ctx, {
       ...chartConfig,
       data: {
-        labels: dk2Rows.map(r => r.aligned_timestamp),
+        labels: dk2Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [{
           label: 'Difference (SSH - CGMA)',
           data: dk2Rows.map(r => getDiffMagnitude(r)),
@@ -1007,7 +1028,7 @@ function renderCompareChartsView(rows) {
     window.compareDk1Chart = new Chart(dk1Ctx, {
       ...chartConfig,
       data: {
-        labels: dk1Rows.map(r => r.aligned_timestamp),
+        labels: dk1Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [
           {
             label: 'IGM (SSH)',
@@ -1045,7 +1066,7 @@ function renderCompareChartsView(rows) {
     window.compareDk2Chart = new Chart(dk2Ctx, {
       ...chartConfig,
       data: {
-        labels: dk2Rows.map(r => r.aligned_timestamp),
+        labels: dk2Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [
           {
             label: 'IGM (SSH)',
