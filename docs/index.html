@@ -23,27 +23,11 @@
           </div>
         </div>
         <div class="actions">
+          <button id="offlineStatusPillNotice" class="status-pill status-missing hidden" title="Open Settings to grant access">IGM not granted</button>
+          <button id="cgmaStatusPillNotice" class="status-pill status-missing hidden" title="Open Settings to grant access">CGMA not granted</button>
           <button id="settingsButton" class="btn btn-secondary">Settings</button>
         </div>
       </header>
-
-      <section id="accessNoticeCard" class="card access-notice hidden" aria-live="polite">
-        <div class="access-notice-body">
-          <h2 class="access-notice-title">Folder access required</h2>
-          <p class="access-notice-text">
-            The paths to the IGM and CGMA network shares have not been granted yet.
-            Open <strong>Settings</strong> to set the paths and grant the browser access
-            to both folders before the comparator can load data.
-          </p>
-          <div class="access-notice-pills">
-            <span id="offlineStatusPillNotice" class="status-pill status-missing">IGM not granted</span>
-            <span id="cgmaStatusPillNotice" class="status-pill status-missing">CGMA not granted</span>
-          </div>
-          <div class="access-notice-actions">
-            <button id="openSettingsFromNotice" class="btn btn-primary">Open Settings</button>
-          </div>
-        </div>
-      </section>
 
       <section id="loaderCard" class="card loader-card hidden" aria-live="polite">
         <div class="loader-row">
