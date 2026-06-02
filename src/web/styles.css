@@ -229,6 +229,41 @@ body {
   background: linear-gradient(160deg, rgba(17, 55, 47, 0.75), rgba(18, 39, 35, 0.75));
 }
 
+.access-notice {
+  border-color: rgba(241, 180, 109, 0.45);
+  background: linear-gradient(160deg, rgba(70, 45, 20, 0.7), rgba(45, 30, 18, 0.7));
+}
+
+.access-notice-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.access-notice-title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #ffe6c7;
+}
+
+.access-notice-text {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.5;
+  max-width: 70ch;
+}
+
+.access-notice-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.access-notice-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .loader-row {
   display: flex;
   align-items: center;

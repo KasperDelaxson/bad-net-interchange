@@ -25,6 +25,11 @@ const el = {
   cgmaStatusPill: document.getElementById("cgmaStatusPill"),
   offlineStatusPillCompact: document.getElementById("offlineStatusPillCompact"),
   cgmaStatusPillCompact: document.getElementById("cgmaStatusPillCompact"),
+  offlineStatusPillNotice: document.getElementById("offlineStatusPillNotice"),
+  cgmaStatusPillNotice: document.getElementById("cgmaStatusPillNotice"),
+  accessNoticeCard: document.getElementById("accessNoticeCard"),
+  comparatorCard: document.getElementById("comparatorCard"),
+  openSettingsFromNotice: document.getElementById("openSettingsFromNotice"),
   offlineValidation: document.getElementById("offlineValidation"),
   cgmaValidation: document.getElementById("cgmaValidation"),
   debugEnabledCheckbox: document.getElementById("debugEnabledCheckbox"),
@@ -240,6 +245,25 @@ function setFolderStatus() {
     el.cgmaStatusPillCompact.textContent = cgmaGranted
       ? `CGMA granted (${state.cgmaRootHandle.name})`
       : "CGMA not granted";
+  }
+
+  // Main-page access notice (visible until both folders are granted)
+  if (el.offlineStatusPillNotice) {
+    el.offlineStatusPillNotice.className = `status-pill ${offlineGranted ? "status-ok" : "status-missing"}`;
+    el.offlineStatusPillNotice.textContent = offlineGranted ? "IGM granted" : "IGM not granted";
+  }
+  if (el.cgmaStatusPillNotice) {
+    el.cgmaStatusPillNotice.className = `status-pill ${cgmaGranted ? "status-ok" : "status-missing"}`;
+    el.cgmaStatusPillNotice.textContent = cgmaGranted
+      ? `CGMA granted (${state.cgmaRootHandle.name})`
+      : "CGMA not granted";
+  }
+  const accessReady = offlineGranted && cgmaGranted;
+  if (el.accessNoticeCard) {
+    el.accessNoticeCard.classList.toggle("hidden", accessReady);
+  }
+  if (el.comparatorCard) {
+    el.comparatorCard.classList.toggle("hidden", !accessReady);
   }
 
   // Update validation status in settings
@@ -1438,6 +1462,12 @@ function bindUi() {
   el.settingsButton.addEventListener("click", () => {
     el.settingsDialog.showModal();
   });
+
+  if (el.openSettingsFromNotice) {
+    el.openSettingsFromNotice.addEventListener("click", () => {
+      el.settingsDialog.showModal();
+    });
+  }
 
   el.closeSettingsButton.addEventListener("click", () => {
     el.settingsDialog.close();
