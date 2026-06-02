@@ -193,8 +193,8 @@ function setFolderStatus() {
   if (el.offlineStatusPill) {
     el.offlineStatusPill.className = `status-pill ${offlineGranted ? "status-ok" : "status-missing"}`;
     el.offlineStatusPill.textContent = offlineGranted
-      ? `OFFLINE granted (${state.offlineRootHandle.name})`
-      : "OFFLINE not granted";
+      ? `IGM granted (${state.offlineRootHandle.name})`
+      : "IGM not granted";
   }
 
   if (el.cgmaStatusPill) {
@@ -208,8 +208,8 @@ function setFolderStatus() {
   if (el.offlineStatusPillCompact) {
     el.offlineStatusPillCompact.className = `status-pill ${offlineGranted ? "status-ok" : "status-missing"}`;
     el.offlineStatusPillCompact.textContent = offlineGranted
-      ? `OFFLINE granted (${state.offlineRootHandle.name})`
-      : "OFFLINE not granted";
+      ? `IGM granted (${state.offlineRootHandle.name})`
+      : "IGM not granted";
   }
 
   if (el.cgmaStatusPillCompact) {
@@ -1394,7 +1394,7 @@ function bindUi() {
   el.grantOfflineButton.addEventListener("click", async () => {
     try {
       await grantOfflineRoot();
-      setResultSummary("OFFLINE root granted.");
+      setResultSummary("IGM root granted.");
       updateValidationStatus();
     } catch (err) {
       const msg = String(err.message || err);
