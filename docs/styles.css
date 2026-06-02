@@ -495,6 +495,18 @@ th {
   word-break: break-word;
 }
 
+#debugInfoPanel .folder-status-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#debugInfoPanel .debug-info-line {
+  margin-top: 6px;
+  word-break: break-word;
+}
+
 .settings-dialog {
   width: min(760px, 92vw);
   border: 1px solid rgba(167, 225, 255, 0.4);

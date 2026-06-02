@@ -34,6 +34,8 @@ const el = {
   filesInfoButton: document.getElementById("filesInfoButton"),
   filesInfoPanel: document.getElementById("filesInfoPanel"),
   filesUsedContent: document.getElementById("filesUsedContent"),
+  debugInfoButton: document.getElementById("debugInfoButton"),
+  debugInfoPanel: document.getElementById("debugInfoPanel"),
   resultSummary: document.getElementById("resultSummary"),
   tabsContainer: document.getElementById("tabsContainer"),
   diffTab: document.getElementById("diffTab"),
@@ -193,7 +195,7 @@ function setFolderStatus() {
   if (el.offlineStatusPill) {
     el.offlineStatusPill.className = `status-pill ${offlineGranted ? "status-ok" : "status-missing"}`;
     el.offlineStatusPill.textContent = offlineGranted
-      ? `IGM granted (${state.offlineRootHandle.name})`
+      ? `IGM granted (IGM)`
       : "IGM not granted";
   }
 
@@ -208,7 +210,7 @@ function setFolderStatus() {
   if (el.offlineStatusPillCompact) {
     el.offlineStatusPillCompact.className = `status-pill ${offlineGranted ? "status-ok" : "status-missing"}`;
     el.offlineStatusPillCompact.textContent = offlineGranted
-      ? `IGM granted (${state.offlineRootHandle.name})`
+      ? `IGM granted (IGM)`
       : "IGM not granted";
   }
 
@@ -450,6 +452,12 @@ function updateFilesUsedPanel(selectedVersion, outputRows) {
 function hideFilesInfoPanel() {
   if (el.filesInfoPanel) {
     el.filesInfoPanel.classList.add("hidden");
+  }
+}
+
+function hideDebugInfoPanel() {
+  if (el.debugInfoPanel) {
+    el.debugInfoPanel.classList.add("hidden");
   }
 }
 
@@ -1400,6 +1408,7 @@ function bindUi() {
     el.filesInfoButton.addEventListener("click", (event) => {
       event.stopPropagation();
       el.filesInfoPanel.classList.toggle("hidden");
+      hideDebugInfoPanel();
     });
 
     el.filesInfoPanel.addEventListener("click", (event) => {
@@ -1411,6 +1420,26 @@ function bindUi() {
           !el.filesInfoButton.contains(event.target) &&
           !el.filesInfoPanel.contains(event.target)) {
         hideFilesInfoPanel();
+      }
+    });
+  }
+
+  if (el.debugInfoButton && el.debugInfoPanel) {
+    el.debugInfoButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      el.debugInfoPanel.classList.toggle("hidden");
+      hideFilesInfoPanel();
+    });
+
+    el.debugInfoPanel.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!el.debugInfoPanel.classList.contains("hidden") &&
+          !el.debugInfoButton.contains(event.target) &&
+          !el.debugInfoPanel.contains(event.target)) {
+        hideDebugInfoPanel();
       }
     });
   }
