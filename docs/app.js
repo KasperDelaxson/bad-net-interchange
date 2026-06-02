@@ -458,6 +458,9 @@ async function findLatestIgmFolder(offlineRootHandle, lookbackDays = 1) {
   let allMatches = [];
   let latestDateLabel = null;
 
+  const seenFileNames = new Set();
+  const dayLabelsWithMatches = [];
+
   debugLog.log(`[IGM Discovery] Searching OFFLINE root for 2D scenarios with lookback=${lookbackDays} days`, 'info');
   // Probe root handle to confirm visibility
   try {
@@ -531,6 +534,13 @@ async function findLatestIgmFolder(offlineRootHandle, lookbackDays = 1) {
 
         const isUseful = Boolean(parseSshFilename(entry.name));
         if (isUseful) {
+          if (seenFileNames.has(entry.name)) {
+            // Same SSH file (same scenarioTime+area+version) already collected from a newer day folder.
+            // Skip to avoid double-loading mirrored files that exist in both today and yesterday folders.
+            debugLog.log(`[IGM Discovery] Skipping duplicate of already-collected file: ${entry.name}`, 'info');
+            continue;
+          }
+          seenFileNames.add(entry.name);
           dateMatches.push({
             handle: entry,
             pathLabel: `${y}/${m}/${d}/${entry.name}`,
@@ -563,12 +573,18 @@ async function findLatestIgmFolder(offlineRootHandle, lookbackDays = 1) {
       debugLog.log(`[IGM Discovery] 2D DKE/DKW SSH matches found: ${dateMatches.length}`, 'info');
 
       if (dateMatches.length > 0) {
-        // Use only the newest day that has matches to avoid double-loading mirrored files
-        // that can exist in both today and yesterday folders.
-        allMatches = dateMatches;
-        latestDateLabel = `${y}-${m}-${d}`;
-        debugLog.log(`[IGM Discovery] Using latest matching day only: ${latestDateLabel}`, 'info');
-        break;
+        // Collect files from every day in the lookback window (not just the newest).
+        // This lets later validation (Model.created vs Model.scenarioTime) discard
+        // invalid newer-day files and fall back to an older day's version.
+        // Duplicates of the same SSH file across mirrored day folders are skipped
+        // above via `seenFileNames` to avoid double-loading.
+        allMatches = allMatches.concat(dateMatches);
+        const dayLabel = `${y}-${m}-${d}`;
+        dayLabelsWithMatches.push(dayLabel);
+        if (!latestDateLabel) {
+          latestDateLabel = dayLabel;
+        }
+        debugLog.log(`[IGM Discovery] Accumulated ${dateMatches.length} file(s) from ${dayLabel} (running total: ${allMatches.length})`, 'info');
       }
     } catch (err) {
       debugLog.log(`[IGM Discovery] ✗ Failed while listing ${pathLabel}: ${String(err.message || err)}`, 'warn');
@@ -581,7 +597,7 @@ async function findLatestIgmFolder(offlineRootHandle, lookbackDays = 1) {
     throw new Error(errorMsg);
   }
 
-  debugLog.log(`[IGM Discovery] ✓ Total 2D DKE/DKW SSH files found: ${allMatches.length}`, 'info');
+  debugLog.log(`[IGM Discovery] ✓ Total 2D DKE/DKW SSH files found: ${allMatches.length} across day(s): ${dayLabelsWithMatches.join(', ')}`, 'info');
 
   return {
     handle: null,
@@ -1049,6 +1065,7 @@ async function runComparison() {
   await scanSources();
 
   const igmRecords = [];
+  let discardedInvalidCreated = 0;
   const totalIgm = state.discoveredIgmFiles.length || 1;
   debugLog.log(`Parsing ${state.discoveredIgmFiles.length} IGM files...`, 'info');
   for (let i = 0; i < state.discoveredIgmFiles.length; i += 1) {
@@ -1058,13 +1075,37 @@ async function runComparison() {
     try {
       const record = extract_igm_record(file.name, bytes);
       record.ssh_full_path = fileItem.fullPath;
-      igmRecords.push(record);
-      debugLog.log(`✓ Parsed IGM: ${file.name}`, 'info');
+
+      // Sanity check: Model.created must not be after Model.scenarioTime.
+      // Some files get re-published in a later day's folder with a higher version
+      // number but a `created` timestamp AFTER their `scenarioTime`, which means
+      // the file was generated too late to be valid for that scenario. Discard
+      // those and rely on the previous day's valid version instead.
+      const scenarioMs = Date.parse(record.ssh_timestamp);
+      const createdMs = Date.parse(record.ssh_created);
+      if (
+        Number.isFinite(scenarioMs) &&
+        Number.isFinite(createdMs) &&
+        createdMs > scenarioMs
+      ) {
+        discardedInvalidCreated += 1;
+        debugLog.log(
+          `✗ Discarding IGM ${file.name}: Model.created (${record.ssh_created}) is after Model.scenarioTime (${record.ssh_timestamp})`,
+          'warn',
+        );
+      } else {
+        igmRecords.push(record);
+        debugLog.log(`✓ Parsed IGM: ${file.name}`, 'info');
+      }
     } catch (err) {
       debugLog.log(`✗ Failed to parse IGM ${file.name}: ${String(err).substring(0, 100)}`, 'warn');
     }
     const fraction = 0.08 + 0.62 * ((i + 1) / totalIgm);
     setProgress(`Parsing IGM ${i + 1}/${totalIgm}...`, fraction);
+  }
+
+  if (discardedInvalidCreated > 0) {
+    debugLog.log(`Discarded ${discardedInvalidCreated} IGM file(s) where Model.created was after Model.scenarioTime`, 'warn');
   }
 
   debugLog.log(`Successfully parsed ${igmRecords.length}/${state.discoveredIgmFiles.length} IGM records`, 'info');
