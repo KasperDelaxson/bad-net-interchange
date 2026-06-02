@@ -424,14 +424,42 @@ function buildFilesUsedText(selectedVersion, outputRows) {
   }
 
   const igmPaths = [...usedPaths].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
-  const lines = [
-    `Selected version: ${selectedVersion}`,
+
+  const versionCreatedMap = state.versionCreatedMap || {};
+  const lines = [`Selected version: ${selectedVersion}`];
+  if (selectedVersion === "latest") {
+    const usedVersions = new Set();
+    const sourceRecords = usedPaths.size > 0
+      ? (state.cachedIgmRecords || []).filter((r) =>
+          r.ssh_full_path && usedPaths.has(r.ssh_full_path))
+      : fallbackRecords;
+    for (const rec of sourceRecords) {
+      if (rec.ssh_version) {
+        usedVersions.add(String(rec.ssh_version));
+      }
+    }
+    const sortedVersions = [...usedVersions].sort((a, b) => compareVersions(a, b));
+    if (sortedVersions.length === 0) {
+      lines.push("Version created: n/a");
+    } else if (sortedVersions.length === 1) {
+      lines.push(`Version created: ${versionCreatedMap[sortedVersions[0]] || "n/a"}`);
+    } else {
+      lines.push("Versions created:");
+      for (const v of sortedVersions) {
+        lines.push(`  ${v}: ${versionCreatedMap[v] || "n/a"}`);
+      }
+    }
+  } else {
+    lines.push(`Version created: ${versionCreatedMap[selectedVersion] || "n/a"}`);
+  }
+
+  lines.push(
     "",
     "CGMA:",
     state.latestCgmaFullPath || "n/a",
     "",
     `IGM (${igmPaths.length}):`,
-  ];
+  );
 
   if (igmPaths.length === 0) {
     lines.push("n/a");
