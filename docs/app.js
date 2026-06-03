@@ -33,6 +33,7 @@ const el = {
   debugEnabledCheckbox: document.getElementById("debugEnabledCheckbox"),
   refreshButton: document.getElementById("refreshButton"),
   versionSelect: document.getElementById("versionSelect"),
+  loadedDateLabel: document.getElementById("loadedDateLabel"),
   selectionInfo: document.getElementById("selectionInfo"),
   filesInfoButton: document.getElementById("filesInfoButton"),
   filesInfoPanel: document.getElementById("filesInfoPanel"),
@@ -377,6 +378,7 @@ function compareVersions(leftVersion, rightVersion) {
 
 function fillVersionSelect(versions) {
   const sorted = [...versions].sort(compareVersions);
+  const previous = el.versionSelect.value;
   el.versionSelect.innerHTML = "";
 
   const latestOption = document.createElement("option");
@@ -391,7 +393,36 @@ function fillVersionSelect(versions) {
     el.versionSelect.appendChild(option);
   }
 
+  // Preserve the user's previous selection only if it's still available.
+  // Otherwise fall back to "latest" so we never silently filter on a version
+  // that no longer exists on disk.
+  if (previous === "latest" || sorted.includes(previous)) {
+    el.versionSelect.value = previous || "latest";
+  } else {
+    el.versionSelect.value = "latest";
+  }
+}
+
+// Returns the effective version to use for filtering. If the UI's selected
+// version is not present in the surviving (parsed, post-filter) IGM records,
+// falls back to "latest" and syncs the <select> so the displayed value matches
+// what compare_records will actually do.
+function reconcileSelectedVersion(igmRecords) {
+  const requested = el.versionSelect.value || "latest";
+  if (requested === "latest") {
+    return "latest";
+  }
+  const available = new Set((igmRecords || []).map((r) => String(r.ssh_version)));
+  if (available.has(requested)) {
+    return requested;
+  }
+  debugLog.log(
+    `Selected version "${requested}" is not present in parsed IGM records ` +
+    `(available: ${[...available].sort().join(", ") || "none"}). Falling back to "latest".`,
+    'warn',
+  );
   el.versionSelect.value = "latest";
+  return "latest";
 }
 
 function parseSshFilename(fileName) {
@@ -822,6 +853,9 @@ function updateSelectionInfo(selectedVersion, outputRows) {
       : (state.versionCreatedMap[selectedVersion] || "n/a");
 
   const timeslotCount = countUniqueTimeslots(outputRows || []);
+  if (el.loadedDateLabel) {
+    el.loadedDateLabel.textContent = state.latestIgmDateLabel || "n/a";
+  }
   el.selectionInfo.textContent =
     `IGM date folder: ${state.latestIgmDateLabel} | CGMA file: ${state.latestCgmaPathLabel || "n/a"} | ` +
     `Selected version: ${versionLabel} | Version created: ${createdLabel} | Timeslots: ${timeslotCount}`;
@@ -830,6 +864,11 @@ function updateSelectionInfo(selectedVersion, outputRows) {
 function applySelectedVersion(selectedVersion) {
   if (!state.cachedIgmRecords || !state.cachedCgmaEntries) {
     return;
+  }
+
+  const effectiveVersion = reconcileSelectedVersion(state.cachedIgmRecords);
+  if (effectiveVersion !== selectedVersion) {
+    selectedVersion = effectiveVersion;
   }
 
   const output = compare_records(
@@ -843,8 +882,11 @@ function applySelectedVersion(selectedVersion) {
   renderRows(output.rows);
   updateSelectionInfo(selectedVersion, output.rows);
   updateFilesUsedPanel(selectedVersion, output.rows);
+  const discardedSuffix = state.discardedInvalidCreated
+    ? ` | Discarded (created > scenarioTime): ${state.discardedInvalidCreated}`
+    : "";
   setResultSummary(
-    `Matched rows: ${output.matched_rows} | Versions discovered: ${output.discovered_versions.join(", ") || "n/a"} | Version mode: ${selectedVersion}`
+    `Matched rows: ${output.matched_rows} | Versions discovered: ${output.discovered_versions.join(", ") || "n/a"} | Version mode: ${selectedVersion}${discardedSuffix}`
   );
 }
 
@@ -1238,8 +1280,9 @@ async function runComparison() {
   state.cachedIgmRecords = igmRecords;
   state.cachedCgmaEntries = cgmaEntries;
   state.versionCreatedMap = computeVersionCreatedMap(igmRecords);
+  state.discardedInvalidCreated = discardedInvalidCreated;
 
-  const selectedVersion = el.versionSelect.value || "latest";
+  const selectedVersion = reconcileSelectedVersion(igmRecords);
   setProgress("Comparing records...", 0.93);
   debugLog.log(`Running comparison with version mode: ${selectedVersion}`, 'info');
   const output = compare_records(state.cachedIgmRecords, state.cachedCgmaEntries, selectedVersion, 50, 200);
@@ -1249,9 +1292,12 @@ async function runComparison() {
   renderRows(output.rows);
   updateSelectionInfo(selectedVersion, output.rows);
   updateFilesUsedPanel(selectedVersion, output.rows);
+  const discardedSuffix = discardedInvalidCreated
+    ? ` | Discarded (created > scenarioTime): ${discardedInvalidCreated}`
+    : "";
   setResultSummary(
     `Matched rows: ${output.matched_rows} | Versions discovered: ${output.discovered_versions.join(", ") || "n/a"
-    } | Version mode: ${selectedVersion}`
+    } | Version mode: ${selectedVersion}${discardedSuffix}`
   );
 
   setProgress("Done", 1);

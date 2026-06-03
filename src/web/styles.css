@@ -364,6 +364,17 @@ button.status-pill:hover {
   margin-bottom: 0;
 }
 
+.loaded-date {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  white-space: nowrap;
+}
+
+.loaded-date #loadedDateLabel {
+  color: var(--text);
+}
+
 select {
   background: #0d1a25;
   color: var(--text);
@@ -563,7 +574,9 @@ th {
 }
 
 #filesInfoPanel .files-popover-title + .files-popover-title {
-  margin-top: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(167, 225, 255, 0.18);
 }
 
 .settings-dialog {
