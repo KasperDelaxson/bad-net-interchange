@@ -125,9 +125,6 @@ function saveDebugSetting(enabled) {
 
 const CPH_TS_FORMATTER = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Europe/Copenhagen",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
   hour: "2-digit",
   minute: "2-digit",
   hour12: false,
@@ -141,7 +138,7 @@ function formatTsCopenhagen(utcIso) {
     acc[p.type] = p.value;
     return acc;
   }, {});
-  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+  return `${parts.hour}:${parts.minute}`;
 }
 
 function toYmd(date, zeroPad) {
@@ -840,6 +837,22 @@ function countUniqueTimeslots(rows) {
   return slots.size;
 }
 
+// 2D scenario data files are published 2 days ahead of the scenario time they
+// represent (data file folder date = scenario date + 2). Convert the data file
+// folder date label (YYYY-MM-DD) back to the scenario date label.
+function computeScenarioDateLabel(dataFileDateLabel) {
+  if (!dataFileDateLabel || !/^\d{4}-\d{2}-\d{2}$/.test(dataFileDateLabel)) {
+    return "";
+  }
+  const [y, m, d] = dataFileDateLabel.split("-").map((n) => parseInt(n, 10));
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() - 2);
+  const yy = date.getUTCFullYear();
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
 function updateSelectionInfo(selectedVersion, outputRows) {
   const versionLabel = selectedVersion === "latest" ? "latest" : selectedVersion;
   const createdLabel =
@@ -849,10 +862,16 @@ function updateSelectionInfo(selectedVersion, outputRows) {
 
   const timeslotCount = countUniqueTimeslots(outputRows || []);
   if (el.loadedDateLabel) {
-    el.loadedDateLabel.textContent = state.latestIgmDateLabel || "n/a";
+    const dataFileDate = state.latestIgmDateLabel || "";
+    const scenarioDate = computeScenarioDateLabel(dataFileDate);
+    el.loadedDateLabel.textContent = scenarioDate || "n/a";
+    el.loadedDateLabel.title = dataFileDate
+      ? `2D scenario data — published 2 days ahead.\nSource data file folder: ${dataFileDate} (scenario time + 2 days).`
+      : "n/a";
   }
   el.selectionInfo.textContent =
-    `IGM date folder: ${state.latestIgmDateLabel} | CGMA file: ${state.latestCgmaPathLabel || "n/a"} | ` +
+    `Scenario time: ${computeScenarioDateLabel(state.latestIgmDateLabel) || "n/a"} | ` +
+    `2D data file folder: ${state.latestIgmDateLabel || "n/a"} | CGMA file: ${state.latestCgmaPathLabel || "n/a"} | ` +
     `Selected version: ${versionLabel} | Version created: ${createdLabel} | Timeslots: ${timeslotCount}`;
 }
 

@@ -373,6 +373,8 @@ button.status-pill:hover {
 
 .loaded-date #loadedDateLabel {
   color: var(--text);
+  border-bottom: 1px dotted var(--text-soft);
+  cursor: help;
 }
 
 select {
