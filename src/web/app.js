@@ -25,11 +25,15 @@ const el = {
   cgmaStatusPill: document.getElementById("cgmaStatusPill"),
   offlineStatusPillCompact: document.getElementById("offlineStatusPillCompact"),
   cgmaStatusPillCompact: document.getElementById("cgmaStatusPillCompact"),
+  offlineStatusPillNotice: document.getElementById("offlineStatusPillNotice"),
+  cgmaStatusPillNotice: document.getElementById("cgmaStatusPillNotice"),
+  comparatorCard: document.getElementById("comparatorCard"),
   offlineValidation: document.getElementById("offlineValidation"),
   cgmaValidation: document.getElementById("cgmaValidation"),
   debugEnabledCheckbox: document.getElementById("debugEnabledCheckbox"),
   refreshButton: document.getElementById("refreshButton"),
   versionSelect: document.getElementById("versionSelect"),
+  loadedDateLabel: document.getElementById("loadedDateLabel"),
   selectionInfo: document.getElementById("selectionInfo"),
   filesInfoButton: document.getElementById("filesInfoButton"),
   filesInfoPanel: document.getElementById("filesInfoPanel"),
@@ -119,6 +123,24 @@ function saveDebugSetting(enabled) {
   }
 }
 
+const CPH_TS_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Copenhagen",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+function formatTsCopenhagen(utcIso) {
+  if (!utcIso) return "";
+  const d = new Date(utcIso);
+  if (isNaN(d.getTime())) return utcIso;
+  const parts = CPH_TS_FORMATTER.formatToParts(d).reduce((acc, p) => {
+    acc[p.type] = p.value;
+    return acc;
+  }, {});
+  return `${parts.hour}:${parts.minute}`;
+}
+
 function toYmd(date, zeroPad) {
   const y = date.getUTCFullYear();
   const m = date.getUTCMonth() + 1;
@@ -193,8 +215,8 @@ function setFolderStatus() {
   if (el.offlineStatusPill) {
     el.offlineStatusPill.className = `status-pill ${offlineGranted ? "status-ok" : "status-missing"}`;
     el.offlineStatusPill.textContent = offlineGranted
-      ? `OFFLINE granted (${state.offlineRootHandle.name})`
-      : "OFFLINE not granted";
+      ? `IGM granted (IGM)`
+      : "IGM not granted";
   }
 
   if (el.cgmaStatusPill) {
@@ -208,8 +230,8 @@ function setFolderStatus() {
   if (el.offlineStatusPillCompact) {
     el.offlineStatusPillCompact.className = `status-pill ${offlineGranted ? "status-ok" : "status-missing"}`;
     el.offlineStatusPillCompact.textContent = offlineGranted
-      ? `OFFLINE granted (${state.offlineRootHandle.name})`
-      : "OFFLINE not granted";
+      ? `IGM granted (IGM)`
+      : "IGM not granted";
   }
 
   if (el.cgmaStatusPillCompact) {
@@ -217,6 +239,20 @@ function setFolderStatus() {
     el.cgmaStatusPillCompact.textContent = cgmaGranted
       ? `CGMA granted (${state.cgmaRootHandle.name})`
       : "CGMA not granted";
+  }
+
+  // Top-bar access pills (visible only when access is missing)
+  if (el.offlineStatusPillNotice) {
+    el.offlineStatusPillNotice.classList.toggle("hidden", offlineGranted);
+    el.offlineStatusPillNotice.textContent = "IGM not granted";
+  }
+  if (el.cgmaStatusPillNotice) {
+    el.cgmaStatusPillNotice.classList.toggle("hidden", cgmaGranted);
+    el.cgmaStatusPillNotice.textContent = "CGMA not granted";
+  }
+  const accessReady = offlineGranted && cgmaGranted;
+  if (el.comparatorCard) {
+    el.comparatorCard.classList.toggle("hidden", !accessReady);
   }
 
   // Update validation status in settings
@@ -339,6 +375,7 @@ function compareVersions(leftVersion, rightVersion) {
 
 function fillVersionSelect(versions) {
   const sorted = [...versions].sort(compareVersions);
+  const previous = el.versionSelect.value;
   el.versionSelect.innerHTML = "";
 
   const latestOption = document.createElement("option");
@@ -353,7 +390,36 @@ function fillVersionSelect(versions) {
     el.versionSelect.appendChild(option);
   }
 
+  // Preserve the user's previous selection only if it's still available.
+  // Otherwise fall back to "latest" so we never silently filter on a version
+  // that no longer exists on disk.
+  if (previous === "latest" || sorted.includes(previous)) {
+    el.versionSelect.value = previous || "latest";
+  } else {
+    el.versionSelect.value = "latest";
+  }
+}
+
+// Returns the effective version to use for filtering. If the UI's selected
+// version is not present in the surviving (parsed, post-filter) IGM records,
+// falls back to "latest" and syncs the <select> so the displayed value matches
+// what compare_records will actually do.
+function reconcileSelectedVersion(igmRecords) {
+  const requested = el.versionSelect.value || "latest";
+  if (requested === "latest") {
+    return "latest";
+  }
+  const available = new Set((igmRecords || []).map((r) => String(r.ssh_version)));
+  if (available.has(requested)) {
+    return requested;
+  }
+  debugLog.log(
+    `Selected version "${requested}" is not present in parsed IGM records ` +
+    `(available: ${[...available].sort().join(", ") || "none"}). Falling back to "latest".`,
+    'warn',
+  );
   el.versionSelect.value = "latest";
+  return "latest";
 }
 
 function parseSshFilename(fileName) {
@@ -422,19 +488,76 @@ function buildFilesUsedText(selectedVersion, outputRows) {
   }
 
   const igmPaths = [...usedPaths].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+
+  const versionCreatedMap = state.versionCreatedMap || {};
+  const scenarioDate = computeScenarioDateLabel(state.cachedIgmRecords);
   const lines = [
+    `Scenario time: ${scenarioDate || "n/a"}`,
     `Selected version: ${selectedVersion}`,
+  ];
+
+  // Collect the versions that actually backed the rows currently shown.
+  const usedVersions = new Set();
+  const sourceRecords = usedPaths.size > 0
+    ? (state.cachedIgmRecords || []).filter((r) =>
+        r.ssh_full_path && usedPaths.has(r.ssh_full_path))
+    : fallbackRecords;
+  for (const rec of sourceRecords) {
+    if (rec.ssh_version) {
+      usedVersions.add(String(rec.ssh_version));
+    }
+  }
+  const sortedVersions = [...usedVersions].sort((a, b) => compareVersions(a, b));
+
+  // Always render one line per version so it's clear which versions are in use
+  // and when each of them was created. In "latest" mode multiple versions can
+  // legitimately appear (one per area/timeslot picking its own latest).
+  // The timestamps below come straight from each file's <Model.created>
+  // element — they are NOT folder names or anything derived.
+  if (sortedVersions.length === 0) {
+    lines.push("Versions used: n/a");
+  } else {
+    lines.push(`Versions used (${sortedVersions.length}) — Model.created per version:`);
+    for (const v of sortedVersions) {
+      lines.push(`  v${v} created: ${formatVersionCreated(versionCreatedMap[v])}`);
+    }
+  }
+
+  lines.push(
     "",
     "CGMA:",
     state.latestCgmaFullPath || "n/a",
     "",
     `IGM (${igmPaths.length}):`,
-  ];
+  );
 
   if (igmPaths.length === 0) {
     lines.push("n/a");
   } else {
     lines.push(...igmPaths);
+  }
+
+  // List files that were discovered but discarded because their Model.created
+  // timestamp is AFTER their Model.scenarioTime (i.e. the file was re-published
+  // too late to be valid for that scenario). These never participate in the
+  // comparison, but surfacing them here makes it explicit why a version that
+  // appears on disk may be missing from the dropdown / version list above.
+  const discardedRecords = state.discardedRecords || [];
+  if (discardedRecords.length > 0) {
+    lines.push("", `Discarded — Model.created > Model.scenarioTime (${discardedRecords.length}):`);
+    const sortedDiscarded = [...discardedRecords].sort((a, b) =>
+      (a.fullPath || a.fileName || "").localeCompare(
+        b.fullPath || b.fileName || "",
+        undefined,
+        { numeric: true },
+      ),
+    );
+    for (const d of sortedDiscarded) {
+      const label = d.fullPath || d.fileName || "(unknown path)";
+      const version = d.version ? `v${d.version}` : "v?";
+      lines.push(`  ${label}`);
+      lines.push(`    ${version} | created=${d.created || "n/a"} | scenarioTime=${d.scenarioTime || "n/a"}`);
+    }
   }
 
   return lines.join("\n");
@@ -457,6 +580,9 @@ async function findLatestIgmFolder(offlineRootHandle, lookbackDays = 1) {
   lookbackDays = Math.min(lookbackDays, 1);
   let allMatches = [];
   let latestDateLabel = null;
+
+  const seenFileNames = new Set();
+  const dayLabelsWithMatches = [];
 
   debugLog.log(`[IGM Discovery] Searching OFFLINE root for 2D scenarios with lookback=${lookbackDays} days`, 'info');
   // Probe root handle to confirm visibility
@@ -531,6 +657,13 @@ async function findLatestIgmFolder(offlineRootHandle, lookbackDays = 1) {
 
         const isUseful = Boolean(parseSshFilename(entry.name));
         if (isUseful) {
+          if (seenFileNames.has(entry.name)) {
+            // Same SSH file (same scenarioTime+area+version) already collected from a newer day folder.
+            // Skip to avoid double-loading mirrored files that exist in both today and yesterday folders.
+            debugLog.log(`[IGM Discovery] Skipping duplicate of already-collected file: ${entry.name}`, 'info');
+            continue;
+          }
+          seenFileNames.add(entry.name);
           dateMatches.push({
             handle: entry,
             pathLabel: `${y}/${m}/${d}/${entry.name}`,
@@ -563,12 +696,18 @@ async function findLatestIgmFolder(offlineRootHandle, lookbackDays = 1) {
       debugLog.log(`[IGM Discovery] 2D DKE/DKW SSH matches found: ${dateMatches.length}`, 'info');
 
       if (dateMatches.length > 0) {
-        // Use only the newest day that has matches to avoid double-loading mirrored files
-        // that can exist in both today and yesterday folders.
-        allMatches = dateMatches;
-        latestDateLabel = `${y}-${m}-${d}`;
-        debugLog.log(`[IGM Discovery] Using latest matching day only: ${latestDateLabel}`, 'info');
-        break;
+        // Collect files from every day in the lookback window (not just the newest).
+        // This lets later validation (Model.created vs Model.scenarioTime) discard
+        // invalid newer-day files and fall back to an older day's version.
+        // Duplicates of the same SSH file across mirrored day folders are skipped
+        // above via `seenFileNames` to avoid double-loading.
+        allMatches = allMatches.concat(dateMatches);
+        const dayLabel = `${y}-${m}-${d}`;
+        dayLabelsWithMatches.push(dayLabel);
+        if (!latestDateLabel) {
+          latestDateLabel = dayLabel;
+        }
+        debugLog.log(`[IGM Discovery] Accumulated ${dateMatches.length} file(s) from ${dayLabel} (running total: ${allMatches.length})`, 'info');
       }
     } catch (err) {
       debugLog.log(`[IGM Discovery] ✗ Failed while listing ${pathLabel}: ${String(err.message || err)}`, 'warn');
@@ -581,7 +720,7 @@ async function findLatestIgmFolder(offlineRootHandle, lookbackDays = 1) {
     throw new Error(errorMsg);
   }
 
-  debugLog.log(`[IGM Discovery] ✓ Total 2D DKE/DKW SSH files found: ${allMatches.length}`, 'info');
+  debugLog.log(`[IGM Discovery] ✓ Total 2D DKE/DKW SSH files found: ${allMatches.length} across day(s): ${dayLabelsWithMatches.join(', ')}`, 'info');
 
   return {
     handle: null,
@@ -693,38 +832,65 @@ async function scanSources() {
   state.latestCgmaFileHandle = cgma.best.handle;
   state.latestCgmaPathLabel = cgma.best.pathLabel;
 
-  const versionSet = new Set();
-  for (const f of igm.files) {
-    const fileName = f.handle?.name || f.name;
-    const parsed = parseSshFilename(fileName);
-    if (parsed) {
-      versionSet.add(parsed.version);
-    }
-  }
-
-  fillVersionSelect([...versionSet]);
+  // NOTE: The version <select> is intentionally NOT populated here from
+  // filename parsing. Filenames can advertise versions (e.g. 005) that turn
+  // out to be invalid once the XML is parsed (Model.created > Model.scenarioTime).
+  // The dropdown is populated/refreshed in runComparison() after that filter
+  // has run, so users can only ever pick versions that actually exist.
 }
 
+// Build per-version metadata about Model.created timestamps. Each version
+// (e.g. "001", "002") can be backed by many SSH files (one per timeslot per
+// area), and each of those files carries its own Model.created stamp. We
+// summarise the range so the FilesInfo panel can show meaningful info even
+// when there are dozens of distinct created timestamps inside one version.
+//
+// IMPORTANT: this is called AFTER the Model.created > Model.scenarioTime
+// discard filter in runComparison(), so only valid records contribute here.
 function computeVersionCreatedMap(igmRecords) {
   const versions = new Map();
   for (const rec of igmRecords) {
     const version = String(rec.ssh_version || "");
     const created = String(rec.ssh_created || "");
-    if (!version || !created) {
+    if (!version) {
       continue;
     }
     if (!versions.has(version)) {
-      versions.set(version, new Set());
+      versions.set(version, { fileCount: 0, distinct: new Set() });
     }
-    versions.get(version).add(created);
+    const entry = versions.get(version);
+    entry.fileCount += 1;
+    if (created) {
+      entry.distinct.add(created);
+    }
   }
 
   const out = {};
-  for (const [version, createdSet] of versions.entries()) {
-    const values = [...createdSet];
-    out[version] = values.length === 1 ? values[0] : `${values[0]} (mixed created timestamps)`;
+  for (const [version, entry] of versions.entries()) {
+    const distinctSorted = [...entry.distinct].sort();
+    out[version] = {
+      earliest: distinctSorted[0] || "",
+      latest: distinctSorted[distinctSorted.length - 1] || "",
+      distinctCount: distinctSorted.length,
+      fileCount: entry.fileCount,
+    };
   }
   return out;
+}
+
+// Render a single version's created-timestamp summary as a one-line string.
+function formatVersionCreated(info) {
+  if (!info) {
+    return "n/a";
+  }
+  const fileLabel = `${info.fileCount} file${info.fileCount === 1 ? "" : "s"}`;
+  if (info.distinctCount === 0) {
+    return `n/a (${fileLabel})`;
+  }
+  if (info.distinctCount === 1) {
+    return `${info.earliest} (${fileLabel})`;
+  }
+  return `${info.earliest} → ${info.latest} (${info.distinctCount} distinct timestamps across ${fileLabel})`;
 }
 
 function countUniqueTimeslots(rows) {
@@ -732,22 +898,67 @@ function countUniqueTimeslots(rows) {
   return slots.size;
 }
 
+// Derive the scenario date (YYYY-MM-DD) from the actual record data
+// (Model.scenarioTime, exposed as ssh_timestamp). A single 2D scenario day spans
+// 24 hourly timeslots in UTC, but the run typically starts late on the previous
+// UTC day (e.g. 22:30Z) and ends early the next day, so the first record's date
+// is not reliable. Pick the date that appears most often across all records;
+// ties break toward the later date so a full scenario day always wins over a
+// fractional carry-over from the previous UTC day.
+function computeScenarioDateLabel(records) {
+  const list = Array.isArray(records) ? records : [];
+  const counts = new Map();
+  for (const rec of list) {
+    const ts = rec && rec.ssh_timestamp;
+    if (!ts) continue;
+    const ms = Date.parse(ts);
+    if (!Number.isFinite(ms)) continue;
+    const d = new Date(ms);
+    const yy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    const label = `${yy}-${mm}-${dd}`;
+    counts.set(label, (counts.get(label) || 0) + 1);
+  }
+  if (counts.size === 0) return "";
+  let bestLabel = "";
+  let bestCount = -1;
+  for (const [label, count] of counts.entries()) {
+    if (count > bestCount || (count === bestCount && label > bestLabel)) {
+      bestLabel = label;
+      bestCount = count;
+    }
+  }
+  return bestLabel;
+}
+
 function updateSelectionInfo(selectedVersion, outputRows) {
   const versionLabel = selectedVersion === "latest" ? "latest" : selectedVersion;
   const createdLabel =
     selectedVersion === "latest"
-      ? "n/a (latest mode can mix versions)"
-      : (state.versionCreatedMap[selectedVersion] || "n/a");
+      ? "n/a (latest mode can mix versions — see Files Info)"
+      : formatVersionCreated(state.versionCreatedMap && state.versionCreatedMap[selectedVersion]);
 
   const timeslotCount = countUniqueTimeslots(outputRows || []);
+  const scenarioDate = computeScenarioDateLabel(state.cachedIgmRecords);
+  const dataFileDate = state.latestIgmDateLabel || "";
+  if (el.loadedDateLabel) {
+    el.loadedDateLabel.textContent = scenarioDate || "n/a";
+  }
   el.selectionInfo.textContent =
-    `IGM date folder: ${state.latestIgmDateLabel} | CGMA file: ${state.latestCgmaPathLabel || "n/a"} | ` +
+    `Scenario time: ${scenarioDate || "n/a"} | ` +
+    `2D data file folder: ${dataFileDate || "n/a"} | CGMA file: ${state.latestCgmaPathLabel || "n/a"} | ` +
     `Selected version: ${versionLabel} | Version created: ${createdLabel} | Timeslots: ${timeslotCount}`;
 }
 
 function applySelectedVersion(selectedVersion) {
   if (!state.cachedIgmRecords || !state.cachedCgmaEntries) {
     return;
+  }
+
+  const effectiveVersion = reconcileSelectedVersion(state.cachedIgmRecords);
+  if (effectiveVersion !== selectedVersion) {
+    selectedVersion = effectiveVersion;
   }
 
   const output = compare_records(
@@ -761,8 +972,11 @@ function applySelectedVersion(selectedVersion) {
   renderRows(output.rows);
   updateSelectionInfo(selectedVersion, output.rows);
   updateFilesUsedPanel(selectedVersion, output.rows);
+  const discardedSuffix = state.discardedInvalidCreated
+    ? ` | Discarded (created > scenarioTime): ${state.discardedInvalidCreated}`
+    : "";
   setResultSummary(
-    `Matched rows: ${output.matched_rows} | Versions discovered: ${output.discovered_versions.join(", ") || "n/a"} | Version mode: ${selectedVersion}`
+    `Matched rows: ${output.matched_rows} | Versions discovered: ${output.discovered_versions.join(", ") || "n/a"} | Version mode: ${selectedVersion}${discardedSuffix}`
   );
 }
 
@@ -795,12 +1009,11 @@ function renderTablesView(rows) {
     const statusClass = `status-${String(row.status).toLowerCase()}`;
 
     tr.innerHTML = `
-      <td>${row.aligned_timestamp}</td>
+      <td>${formatTsCopenhagen(row.aligned_timestamp)}</td>
       <td>${row.ssh_version}</td>
       <td>${Number(row.ssh_net_interchange_mw).toFixed(3)}</td>
       <td>${Number(row.cgma_net_position_mw).toFixed(3)}</td>
-      <td>${getDiffMagnitude(row).toFixed(3)}</td>
-      <td class="${statusClass}">${row.status}</td>
+      <td class="${statusClass}">${getDiffMagnitude(row).toFixed(3)}</td>
     `;
 
     if (row.area === "DK1") {
@@ -865,7 +1078,7 @@ function renderDiffChartsView(rows) {
     window.diffDk1Chart = new Chart(dk1Ctx, {
       ...chartConfig,
       data: {
-        labels: dk1Rows.map(r => r.aligned_timestamp),
+        labels: dk1Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [{
           label: 'Difference (SSH - CGMA)',
           data: dk1Rows.map(r => getDiffMagnitude(r)),
@@ -890,7 +1103,7 @@ function renderDiffChartsView(rows) {
     window.diffDk2Chart = new Chart(dk2Ctx, {
       ...chartConfig,
       data: {
-        labels: dk2Rows.map(r => r.aligned_timestamp),
+        labels: dk2Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [{
           label: 'Difference (SSH - CGMA)',
           data: dk2Rows.map(r => getDiffMagnitude(r)),
@@ -955,7 +1168,7 @@ function renderCompareChartsView(rows) {
     window.compareDk1Chart = new Chart(dk1Ctx, {
       ...chartConfig,
       data: {
-        labels: dk1Rows.map(r => r.aligned_timestamp),
+        labels: dk1Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [
           {
             label: 'IGM (SSH)',
@@ -993,7 +1206,7 @@ function renderCompareChartsView(rows) {
     window.compareDk2Chart = new Chart(dk2Ctx, {
       ...chartConfig,
       data: {
-        labels: dk2Rows.map(r => r.aligned_timestamp),
+        labels: dk2Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [
           {
             label: 'IGM (SSH)',
@@ -1049,6 +1262,8 @@ async function runComparison() {
   await scanSources();
 
   const igmRecords = [];
+  const discardedRecords = [];
+  let discardedInvalidCreated = 0;
   const totalIgm = state.discoveredIgmFiles.length || 1;
   debugLog.log(`Parsing ${state.discoveredIgmFiles.length} IGM files...`, 'info');
   for (let i = 0; i < state.discoveredIgmFiles.length; i += 1) {
@@ -1058,13 +1273,44 @@ async function runComparison() {
     try {
       const record = extract_igm_record(file.name, bytes);
       record.ssh_full_path = fileItem.fullPath;
-      igmRecords.push(record);
-      debugLog.log(`✓ Parsed IGM: ${file.name}`, 'info');
+
+      // Sanity check: Model.created must not be after Model.scenarioTime.
+      // Some files get re-published in a later day's folder with a higher version
+      // number but a `created` timestamp AFTER their `scenarioTime`, which means
+      // the file was generated too late to be valid for that scenario. Discard
+      // those and rely on the previous day's valid version instead.
+      const scenarioMs = Date.parse(record.ssh_timestamp);
+      const createdMs = Date.parse(record.ssh_created);
+      if (
+        Number.isFinite(scenarioMs) &&
+        Number.isFinite(createdMs) &&
+        createdMs > scenarioMs
+      ) {
+        discardedInvalidCreated += 1;
+        discardedRecords.push({
+          fileName: file.name,
+          fullPath: fileItem.fullPath,
+          version: record.ssh_version,
+          created: record.ssh_created,
+          scenarioTime: record.ssh_timestamp,
+        });
+        debugLog.log(
+          `✗ Discarding IGM ${file.name}: Model.created (${record.ssh_created}) is after Model.scenarioTime (${record.ssh_timestamp})`,
+          'warn',
+        );
+      } else {
+        igmRecords.push(record);
+        debugLog.log(`✓ Parsed IGM: ${file.name}`, 'info');
+      }
     } catch (err) {
       debugLog.log(`✗ Failed to parse IGM ${file.name}: ${String(err).substring(0, 100)}`, 'warn');
     }
     const fraction = 0.08 + 0.62 * ((i + 1) / totalIgm);
     setProgress(`Parsing IGM ${i + 1}/${totalIgm}...`, fraction);
+  }
+
+  if (discardedInvalidCreated > 0) {
+    debugLog.log(`Discarded ${discardedInvalidCreated} IGM file(s) where Model.created was after Model.scenarioTime`, 'warn');
   }
 
   debugLog.log(`Successfully parsed ${igmRecords.length}/${state.discoveredIgmFiles.length} IGM records`, 'info');
@@ -1132,8 +1378,16 @@ async function runComparison() {
   state.cachedIgmRecords = igmRecords;
   state.cachedCgmaEntries = cgmaEntries;
   state.versionCreatedMap = computeVersionCreatedMap(igmRecords);
+  state.discardedInvalidCreated = discardedInvalidCreated;
+  state.discardedRecords = discardedRecords;
 
-  const selectedVersion = el.versionSelect.value || "latest";
+  // Populate the version dropdown ONLY with versions that survived the
+  // Model.created <= Model.scenarioTime sanity check. This guarantees every
+  // option in the list is selectable and will produce real matches.
+  const survivingVersions = new Set(igmRecords.map((r) => String(r.ssh_version)));
+  fillVersionSelect([...survivingVersions]);
+
+  const selectedVersion = reconcileSelectedVersion(igmRecords);
   setProgress("Comparing records...", 0.93);
   debugLog.log(`Running comparison with version mode: ${selectedVersion}`, 'info');
   const output = compare_records(state.cachedIgmRecords, state.cachedCgmaEntries, selectedVersion, 50, 200);
@@ -1143,9 +1397,12 @@ async function runComparison() {
   renderRows(output.rows);
   updateSelectionInfo(selectedVersion, output.rows);
   updateFilesUsedPanel(selectedVersion, output.rows);
+  const discardedSuffix = discardedInvalidCreated
+    ? ` | Discarded (created > scenarioTime): ${discardedInvalidCreated}`
+    : "";
   setResultSummary(
     `Matched rows: ${output.matched_rows} | Versions discovered: ${output.discovered_versions.join(", ") || "n/a"
-    } | Version mode: ${selectedVersion}`
+    } | Version mode: ${selectedVersion}${discardedSuffix}`
   );
 
   setProgress("Done", 1);
@@ -1341,6 +1598,17 @@ function bindUi() {
     el.settingsDialog.showModal();
   });
 
+  if (el.offlineStatusPillNotice) {
+    el.offlineStatusPillNotice.addEventListener("click", () => {
+      el.settingsDialog.showModal();
+    });
+  }
+  if (el.cgmaStatusPillNotice) {
+    el.cgmaStatusPillNotice.addEventListener("click", () => {
+      el.settingsDialog.showModal();
+    });
+  }
+
   el.closeSettingsButton.addEventListener("click", () => {
     el.settingsDialog.close();
   });
@@ -1394,7 +1662,7 @@ function bindUi() {
   el.grantOfflineButton.addEventListener("click", async () => {
     try {
       await grantOfflineRoot();
-      setResultSummary("OFFLINE root granted.");
+      setResultSummary("IGM root granted.");
       updateValidationStatus();
     } catch (err) {
       const msg = String(err.message || err);

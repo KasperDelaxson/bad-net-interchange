@@ -64,7 +64,15 @@ body {
   border: 1px solid var(--line-strong);
   border-radius: 20px;
   background: linear-gradient(140deg, rgba(19, 39, 54, 0.94), rgba(15, 31, 43, 0.92));
+}
+
+.hero__bg {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .hero__glow {
@@ -167,6 +175,17 @@ body {
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  font-family: inherit;
+}
+
+button.status-pill {
+  cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+
+button.status-pill:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
 }
 
 .status-ok {
@@ -183,6 +202,7 @@ body {
 
 .actions {
   display: flex;
+  align-items: center;
   gap: 10px;
   z-index: 1;
 }
@@ -227,6 +247,41 @@ body {
 .loader-card {
   border-color: rgba(98, 209, 129, 0.45);
   background: linear-gradient(160deg, rgba(17, 55, 47, 0.75), rgba(18, 39, 35, 0.75));
+}
+
+.access-notice {
+  border-color: rgba(241, 180, 109, 0.45);
+  background: linear-gradient(160deg, rgba(70, 45, 20, 0.7), rgba(45, 30, 18, 0.7));
+}
+
+.access-notice-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.access-notice-title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #ffe6c7;
+}
+
+.access-notice-text {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.5;
+  max-width: 70ch;
+}
+
+.access-notice-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.access-notice-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .loader-row {
@@ -307,6 +362,17 @@ body {
 
 .compact-row {
   margin-bottom: 0;
+}
+
+.loaded-date {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  white-space: nowrap;
+}
+
+.loaded-date #loadedDateLabel {
+  color: var(--text);
 }
 
 select {
@@ -474,7 +540,7 @@ th {
   border-radius: 12px;
   background: rgba(8, 18, 26, 0.97);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
-  z-index: 15;
+  z-index: 50;
 }
 
 .files-popover-title {
@@ -493,6 +559,24 @@ th {
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+#filesInfoPanel .folder-status-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#filesInfoPanel .debug-info-line {
+  margin-top: 6px;
+  word-break: break-word;
+}
+
+#filesInfoPanel .files-popover-title--separated {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(167, 225, 255, 0.18);
 }
 
 .settings-dialog {
@@ -614,8 +698,8 @@ th {
 
 .path-helper-box {
   min-width: 0;
-  max-width: 340px;
-  flex: 0 0 260px;
+  max-width: 520px;
+  flex: 1 1 320px;
   background: #0f1f2b;
   border-radius: 7px;
   border: 1px solid rgba(167, 225, 255, 0.13);
@@ -629,9 +713,10 @@ th {
   margin: 0;
   font-size: 0.85rem;
   color: var(--text-soft);
-  white-space: nowrap;
-  overflow-x: auto;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  line-height: 1.35;
 }
 
 .btn-icon-copy {
