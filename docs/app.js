@@ -491,9 +491,8 @@ function buildFilesUsedText(selectedVersion, outputRows) {
 
   const versionCreatedMap = state.versionCreatedMap || {};
   const scenarioDate = computeScenarioDateLabel(state.cachedIgmRecords);
-  const dataFileDate = state.latestIgmDateLabel || "n/a";
   const lines = [
-    `Scenario time: ${scenarioDate || "n/a"}  (2D scenario data — underlying data files dated ${dataFileDate})`,
+    `Scenario time: ${scenarioDate || "n/a"}`,
     `Selected version: ${selectedVersion}`,
   ];
 
@@ -930,9 +929,6 @@ function updateSelectionInfo(selectedVersion, outputRows) {
   const dataFileDate = state.latestIgmDateLabel || "";
   if (el.loadedDateLabel) {
     el.loadedDateLabel.textContent = scenarioDate || "n/a";
-    el.loadedDateLabel.title = scenarioDate
-      ? `2D scenario data — the underlying data files are dated ${dataFileDate || "n/a"}.`
-      : "n/a";
   }
   el.selectionInfo.textContent =
     `Scenario time: ${scenarioDate || "n/a"} | ` +
