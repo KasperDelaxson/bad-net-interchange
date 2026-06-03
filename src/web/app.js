@@ -899,10 +899,15 @@ function countUniqueTimeslots(rows) {
 }
 
 // Derive the scenario date (YYYY-MM-DD) from the actual record data
-// (Model.scenarioTime, exposed as ssh_timestamp). All IGM records for a single
-// scenario day share the same date portion, so the first valid one wins.
+// (Model.scenarioTime, exposed as ssh_timestamp). A single 2D scenario day spans
+// 24 hourly timeslots in UTC, but the run typically starts late on the previous
+// UTC day (e.g. 22:30Z) and ends early the next day, so the first record's date
+// is not reliable. Pick the date that appears most often across all records;
+// ties break toward the later date so a full scenario day always wins over a
+// fractional carry-over from the previous UTC day.
 function computeScenarioDateLabel(records) {
   const list = Array.isArray(records) ? records : [];
+  const counts = new Map();
   for (const rec of list) {
     const ts = rec && rec.ssh_timestamp;
     if (!ts) continue;
@@ -912,9 +917,19 @@ function computeScenarioDateLabel(records) {
     const yy = d.getUTCFullYear();
     const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
     const dd = String(d.getUTCDate()).padStart(2, "0");
-    return `${yy}-${mm}-${dd}`;
+    const label = `${yy}-${mm}-${dd}`;
+    counts.set(label, (counts.get(label) || 0) + 1);
   }
-  return "";
+  if (counts.size === 0) return "";
+  let bestLabel = "";
+  let bestCount = -1;
+  for (const [label, count] of counts.entries()) {
+    if (count > bestCount || (count === bestCount && label > bestLabel)) {
+      bestLabel = label;
+      bestCount = count;
+    }
+  }
+  return bestLabel;
 }
 
 function updateSelectionInfo(selectedVersion, outputRows) {
