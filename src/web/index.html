@@ -10,7 +10,7 @@
   <body>
     <main class="app-shell">
       <header class="hero">
-        <div class="hero__glow"></div>
+        <div class="hero__bg"><div class="hero__glow"></div></div>
         <div class="hero__content">
           <div class="hero__title-row">
             <h1>CGMA vs IGM Comparator</h1>
@@ -33,17 +33,17 @@
             <button id="debugInfoButton" class="btn-icon btn-icon-inline" aria-label="Show debug info" title="Show debug info">
               <span class="info-icon" aria-hidden="true">&#x1F41E;</span>
             </button>
+            <div id="debugInfoPanel" class="files-popover hidden" role="dialog" aria-label="Debug information">
+              <div class="files-popover-title">Debug Info</div>
+              <div id="folderStatusCompact" class="folder-status-compact" aria-live="polite">
+                <span id="offlineStatusPillCompact" class="status-pill status-missing">IGM not granted</span>
+                <span id="cgmaStatusPillCompact" class="status-pill status-missing">CGMA not granted</span>
+              </div>
+              <div id="selectionInfo" class="small debug-info-line"></div>
+              <div id="resultSummary" class="small debug-info-line">Waiting for folder access...</div>
+            </div>
           </div>
           <button id="refreshButton" class="btn">Reload Data</button>
-          <div id="debugInfoPanel" class="files-popover hidden" role="dialog" aria-label="Debug information">
-            <div class="files-popover-title">Debug Info</div>
-            <div id="folderStatusCompact" class="folder-status-compact" aria-live="polite">
-              <span id="offlineStatusPillCompact" class="status-pill status-missing">IGM not granted</span>
-              <span id="cgmaStatusPillCompact" class="status-pill status-missing">CGMA not granted</span>
-            </div>
-            <div id="selectionInfo" class="small debug-info-line"></div>
-            <div id="resultSummary" class="small debug-info-line">Waiting for folder access...</div>
-          </div>
           <button id="offlineStatusPillNotice" class="status-pill status-missing hidden" title="Open Settings to grant access">IGM not granted</button>
           <button id="cgmaStatusPillNotice" class="status-pill status-missing hidden" title="Open Settings to grant access">CGMA not granted</button>
           <button id="settingsButton" class="btn btn-secondary">Settings</button>
