@@ -490,31 +490,38 @@ function buildFilesUsedText(selectedVersion, outputRows) {
   const igmPaths = [...usedPaths].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
 
   const versionCreatedMap = state.versionCreatedMap || {};
-  const lines = [`Selected version: ${selectedVersion}`];
-  if (selectedVersion === "latest") {
-    const usedVersions = new Set();
-    const sourceRecords = usedPaths.size > 0
-      ? (state.cachedIgmRecords || []).filter((r) =>
-          r.ssh_full_path && usedPaths.has(r.ssh_full_path))
-      : fallbackRecords;
-    for (const rec of sourceRecords) {
-      if (rec.ssh_version) {
-        usedVersions.add(String(rec.ssh_version));
-      }
+  const scenarioDate = computeScenarioDateLabel(state.cachedIgmRecords);
+  const dataFileDate = state.latestIgmDateLabel || "n/a";
+  const lines = [
+    `Scenario time: ${scenarioDate || "n/a"}  (2D scenario data — underlying data files dated ${dataFileDate})`,
+    `Selected version: ${selectedVersion}`,
+  ];
+
+  // Collect the versions that actually backed the rows currently shown.
+  const usedVersions = new Set();
+  const sourceRecords = usedPaths.size > 0
+    ? (state.cachedIgmRecords || []).filter((r) =>
+        r.ssh_full_path && usedPaths.has(r.ssh_full_path))
+    : fallbackRecords;
+  for (const rec of sourceRecords) {
+    if (rec.ssh_version) {
+      usedVersions.add(String(rec.ssh_version));
     }
-    const sortedVersions = [...usedVersions].sort((a, b) => compareVersions(a, b));
-    if (sortedVersions.length === 0) {
-      lines.push("Version created: n/a");
-    } else if (sortedVersions.length === 1) {
-      lines.push(`Version created: ${versionCreatedMap[sortedVersions[0]] || "n/a"}`);
-    } else {
-      lines.push("Versions created:");
-      for (const v of sortedVersions) {
-        lines.push(`  ${v}: ${versionCreatedMap[v] || "n/a"}`);
-      }
-    }
+  }
+  const sortedVersions = [...usedVersions].sort((a, b) => compareVersions(a, b));
+
+  // Always render one line per version so it's clear which versions are in use
+  // and when each of them was created. In "latest" mode multiple versions can
+  // legitimately appear (one per area/timeslot picking its own latest).
+  // The timestamps below come straight from each file's <Model.created>
+  // element — they are NOT folder names or anything derived.
+  if (sortedVersions.length === 0) {
+    lines.push("Versions used: n/a");
   } else {
-    lines.push(`Version created: ${versionCreatedMap[selectedVersion] || "n/a"}`);
+    lines.push(`Versions used (${sortedVersions.length}) — Model.created per version:`);
+    for (const v of sortedVersions) {
+      lines.push(`  v${v} created: ${formatVersionCreated(versionCreatedMap[v])}`);
+    }
   }
 
   lines.push(
@@ -529,6 +536,29 @@ function buildFilesUsedText(selectedVersion, outputRows) {
     lines.push("n/a");
   } else {
     lines.push(...igmPaths);
+  }
+
+  // List files that were discovered but discarded because their Model.created
+  // timestamp is AFTER their Model.scenarioTime (i.e. the file was re-published
+  // too late to be valid for that scenario). These never participate in the
+  // comparison, but surfacing them here makes it explicit why a version that
+  // appears on disk may be missing from the dropdown / version list above.
+  const discardedRecords = state.discardedRecords || [];
+  if (discardedRecords.length > 0) {
+    lines.push("", `Discarded — Model.created > Model.scenarioTime (${discardedRecords.length}):`);
+    const sortedDiscarded = [...discardedRecords].sort((a, b) =>
+      (a.fullPath || a.fileName || "").localeCompare(
+        b.fullPath || b.fileName || "",
+        undefined,
+        { numeric: true },
+      ),
+    );
+    for (const d of sortedDiscarded) {
+      const label = d.fullPath || d.fileName || "(unknown path)";
+      const version = d.version ? `v${d.version}` : "v?";
+      lines.push(`  ${label}`);
+      lines.push(`    ${version} | created=${d.created || "n/a"} | scenarioTime=${d.scenarioTime || "n/a"}`);
+    }
   }
 
   return lines.join("\n");
@@ -810,26 +840,58 @@ async function scanSources() {
   // has run, so users can only ever pick versions that actually exist.
 }
 
+// Build per-version metadata about Model.created timestamps. Each version
+// (e.g. "001", "002") can be backed by many SSH files (one per timeslot per
+// area), and each of those files carries its own Model.created stamp. We
+// summarise the range so the FilesInfo panel can show meaningful info even
+// when there are dozens of distinct created timestamps inside one version.
+//
+// IMPORTANT: this is called AFTER the Model.created > Model.scenarioTime
+// discard filter in runComparison(), so only valid records contribute here.
 function computeVersionCreatedMap(igmRecords) {
   const versions = new Map();
   for (const rec of igmRecords) {
     const version = String(rec.ssh_version || "");
     const created = String(rec.ssh_created || "");
-    if (!version || !created) {
+    if (!version) {
       continue;
     }
     if (!versions.has(version)) {
-      versions.set(version, new Set());
+      versions.set(version, { fileCount: 0, distinct: new Set() });
     }
-    versions.get(version).add(created);
+    const entry = versions.get(version);
+    entry.fileCount += 1;
+    if (created) {
+      entry.distinct.add(created);
+    }
   }
 
   const out = {};
-  for (const [version, createdSet] of versions.entries()) {
-    const values = [...createdSet];
-    out[version] = values.length === 1 ? values[0] : `${values[0]} (mixed created timestamps)`;
+  for (const [version, entry] of versions.entries()) {
+    const distinctSorted = [...entry.distinct].sort();
+    out[version] = {
+      earliest: distinctSorted[0] || "",
+      latest: distinctSorted[distinctSorted.length - 1] || "",
+      distinctCount: distinctSorted.length,
+      fileCount: entry.fileCount,
+    };
   }
   return out;
+}
+
+// Render a single version's created-timestamp summary as a one-line string.
+function formatVersionCreated(info) {
+  if (!info) {
+    return "n/a";
+  }
+  const fileLabel = `${info.fileCount} file${info.fileCount === 1 ? "" : "s"}`;
+  if (info.distinctCount === 0) {
+    return `n/a (${fileLabel})`;
+  }
+  if (info.distinctCount === 1) {
+    return `${info.earliest} (${fileLabel})`;
+  }
+  return `${info.earliest} → ${info.latest} (${info.distinctCount} distinct timestamps across ${fileLabel})`;
 }
 
 function countUniqueTimeslots(rows) {
@@ -837,41 +899,44 @@ function countUniqueTimeslots(rows) {
   return slots.size;
 }
 
-// 2D scenario data files are published 2 days ahead of the scenario time they
-// represent (data file folder date = scenario date + 2). Convert the data file
-// folder date label (YYYY-MM-DD) back to the scenario date label.
-function computeScenarioDateLabel(dataFileDateLabel) {
-  if (!dataFileDateLabel || !/^\d{4}-\d{2}-\d{2}$/.test(dataFileDateLabel)) {
-    return "";
+// Derive the scenario date (YYYY-MM-DD) from the actual record data
+// (Model.scenarioTime, exposed as ssh_timestamp). All IGM records for a single
+// scenario day share the same date portion, so the first valid one wins.
+function computeScenarioDateLabel(records) {
+  const list = Array.isArray(records) ? records : [];
+  for (const rec of list) {
+    const ts = rec && rec.ssh_timestamp;
+    if (!ts) continue;
+    const ms = Date.parse(ts);
+    if (!Number.isFinite(ms)) continue;
+    const d = new Date(ms);
+    const yy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    return `${yy}-${mm}-${dd}`;
   }
-  const [y, m, d] = dataFileDateLabel.split("-").map((n) => parseInt(n, 10));
-  const date = new Date(Date.UTC(y, m - 1, d));
-  date.setUTCDate(date.getUTCDate() - 2);
-  const yy = date.getUTCFullYear();
-  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(date.getUTCDate()).padStart(2, "0");
-  return `${yy}-${mm}-${dd}`;
+  return "";
 }
 
 function updateSelectionInfo(selectedVersion, outputRows) {
   const versionLabel = selectedVersion === "latest" ? "latest" : selectedVersion;
   const createdLabel =
     selectedVersion === "latest"
-      ? "n/a (latest mode can mix versions)"
-      : (state.versionCreatedMap[selectedVersion] || "n/a");
+      ? "n/a (latest mode can mix versions — see Files Info)"
+      : formatVersionCreated(state.versionCreatedMap && state.versionCreatedMap[selectedVersion]);
 
   const timeslotCount = countUniqueTimeslots(outputRows || []);
+  const scenarioDate = computeScenarioDateLabel(state.cachedIgmRecords);
+  const dataFileDate = state.latestIgmDateLabel || "";
   if (el.loadedDateLabel) {
-    const dataFileDate = state.latestIgmDateLabel || "";
-    const scenarioDate = computeScenarioDateLabel(dataFileDate);
     el.loadedDateLabel.textContent = scenarioDate || "n/a";
-    el.loadedDateLabel.title = dataFileDate
-      ? `2D scenario data — published 2 days ahead.\nSource data file folder: ${dataFileDate} (scenario time + 2 days).`
+    el.loadedDateLabel.title = scenarioDate
+      ? `2D scenario data — the underlying data files are dated ${dataFileDate || "n/a"}.`
       : "n/a";
   }
   el.selectionInfo.textContent =
-    `Scenario time: ${computeScenarioDateLabel(state.latestIgmDateLabel) || "n/a"} | ` +
-    `2D data file folder: ${state.latestIgmDateLabel || "n/a"} | CGMA file: ${state.latestCgmaPathLabel || "n/a"} | ` +
+    `Scenario time: ${scenarioDate || "n/a"} | ` +
+    `2D data file folder: ${dataFileDate || "n/a"} | CGMA file: ${state.latestCgmaPathLabel || "n/a"} | ` +
     `Selected version: ${versionLabel} | Version created: ${createdLabel} | Timeslots: ${timeslotCount}`;
 }
 
@@ -1186,6 +1251,7 @@ async function runComparison() {
   await scanSources();
 
   const igmRecords = [];
+  const discardedRecords = [];
   let discardedInvalidCreated = 0;
   const totalIgm = state.discoveredIgmFiles.length || 1;
   debugLog.log(`Parsing ${state.discoveredIgmFiles.length} IGM files...`, 'info');
@@ -1210,6 +1276,13 @@ async function runComparison() {
         createdMs > scenarioMs
       ) {
         discardedInvalidCreated += 1;
+        discardedRecords.push({
+          fileName: file.name,
+          fullPath: fileItem.fullPath,
+          version: record.ssh_version,
+          created: record.ssh_created,
+          scenarioTime: record.ssh_timestamp,
+        });
         debugLog.log(
           `✗ Discarding IGM ${file.name}: Model.created (${record.ssh_created}) is after Model.scenarioTime (${record.ssh_timestamp})`,
           'warn',
@@ -1295,6 +1368,7 @@ async function runComparison() {
   state.cachedCgmaEntries = cgmaEntries;
   state.versionCreatedMap = computeVersionCreatedMap(igmRecords);
   state.discardedInvalidCreated = discardedInvalidCreated;
+  state.discardedRecords = discardedRecords;
 
   // Populate the version dropdown ONLY with versions that survived the
   // Model.created <= Model.scenarioTime sanity check. This guarantees every
