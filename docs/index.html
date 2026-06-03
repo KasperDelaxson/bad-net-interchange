@@ -10,19 +10,35 @@
   <body>
     <main class="app-shell">
       <header class="hero">
-        <div class="hero__glow"></div>
+        <div class="hero__bg"><div class="hero__glow"></div></div>
         <div class="hero__content">
           <div class="hero__title-row">
             <h1>CGMA vs IGM Comparator</h1>
-            <button id="infoButton" class="btn-icon" aria-label="Information">
-              <span class="info-icon">ℹ</span>
-            </button>
             <div id="infoTooltip" class="tooltip hidden">
               Validation of latest 2D SSH scenarios against CGMA inhouse net position
             </div>
           </div>
         </div>
         <div class="actions">
+          <button id="offlineStatusPillNotice" class="status-pill status-missing hidden" title="Open Settings to grant access">IGM not granted</button>
+          <button id="cgmaStatusPillNotice" class="status-pill status-missing hidden" title="Open Settings to grant access">CGMA not granted</button>
+          <div class="files-info-anchor">
+            <button id="filesInfoButton" class="btn-icon btn-icon-inline" aria-label="Show debug and files info" title="Show debug and files info">
+              <span class="info-icon">?</span>
+            </button>
+            <div id="filesInfoPanel" class="files-popover hidden" role="dialog" aria-label="Debug and files information">
+              <div class="files-popover-title">Debug Info</div>
+              <div id="folderStatusCompact" class="folder-status-compact" aria-live="polite">
+                <span id="offlineStatusPillCompact" class="status-pill status-missing">IGM not granted</span>
+                <span id="cgmaStatusPillCompact" class="status-pill status-missing">CGMA not granted</span>
+              </div>
+              <div id="selectionInfo" class="small debug-info-line"></div>
+              <div id="resultSummary" class="small debug-info-line">Waiting for folder access...</div>
+              <div class="files-popover-title files-popover-title--separated">Files Used</div>
+              <pre id="filesUsedContent" class="files-popover-content mono">No files loaded yet.</pre>
+            </div>
+          </div>
+          <button id="refreshButton" class="btn">Reload Data</button>
           <button id="settingsButton" class="btn btn-secondary">Settings</button>
         </div>
       </header>
@@ -40,36 +56,18 @@
         </div>
       </section>
 
-      <section class="card">
-        <div class="output-header">
-          <div id="folderStatusCompact" class="folder-status-compact" aria-live="polite">
-            <span id="offlineStatusPillCompact" class="status-pill status-missing">OFFLINE not granted</span>
-            <span id="cgmaStatusPillCompact" class="status-pill status-missing">CGMA not granted</span>
-          </div>
-          <div class="output-toolbar">
-            <div id="selectionInfo" class="small"></div>
-            <div class="files-info-anchor">
-              <button id="filesInfoButton" class="btn-icon btn-icon-inline" aria-label="Show files used" title="Show files used">
-                <span class="info-icon">?</span>
-              </button>
-              <div id="filesInfoPanel" class="files-popover hidden" role="dialog" aria-label="Files used for comparison">
-                <div class="files-popover-title">Files Used</div>
-                <pre id="filesUsedContent" class="files-popover-content mono">No files loaded yet.</pre>
-              </div>
-            </div>
-            <div class="field-row compact-row">
-              <label for="versionSelect">Version:</label>
-              <select id="versionSelect"></select>
-            </div>
-            <button id="refreshButton" class="btn">Refresh Compare</button>
-          </div>
-        </div>
-        <div id="resultSummary" class="small">Waiting for folder access...</div>
-        
+      <section id="comparatorCard" class="card">
         <div class="tabs-container" id="tabsContainer">
           <button id="diffTab" class="tab-button active">Diff</button>
           <button id="compareTab" class="tab-button">Compare</button>
           <button id="tableTab" class="tab-button">Tables</button>
+          <div class="field-row compact-row" style="margin-left: auto; padding:8px 12px;">
+            <span class="loaded-date">Scenario Date: <span id="loadedDateLabel">n/a</span></span>
+          </div>
+          <div class="field-row compact-row" style="padding:8px 12px;">
+            <label for="versionSelect">Version:</label>
+            <select id="versionSelect"></select>
+          </div>
         </div>
 
         <div id="diffSection" class="charts-section">
@@ -101,12 +99,11 @@
               <table id="resultTableDk1">
                 <thead>
                   <tr>
-                    <th data-sort="aligned_timestamp">Time (UTC)</th>
+                    <th data-sort="aligned_timestamp">Time (Copenhagen)</th>
                     <th data-sort="ssh_version">Version</th>
                     <th data-sort="ssh_net_interchange_mw">IGM MW</th>
                     <th data-sort="cgma_net_position_mw">CGMA MW</th>
                     <th data-sort="difference_mw">Diff MW</th>
-                    <th data-sort="status">Status</th>
                   </tr>
                 </thead>
                 <tbody id="resultBodyDk1"></tbody>
@@ -119,12 +116,11 @@
               <table id="resultTableDk2">
                 <thead>
                   <tr>
-                    <th data-sort="aligned_timestamp">Time (UTC)</th>
+                    <th data-sort="aligned_timestamp">Time (Copenhagen)</th>
                     <th data-sort="ssh_version">Version</th>
                     <th data-sort="ssh_net_interchange_mw">IGM MW</th>
                     <th data-sort="cgma_net_position_mw">CGMA MW</th>
                     <th data-sort="difference_mw">Diff MW</th>
-                    <th data-sort="status">Status</th>
                   </tr>
                 </thead>
                 <tbody id="resultBodyDk2"></tbody>
@@ -152,7 +148,7 @@
       <div class="path-list" aria-label="Folder permissions">
         <div class="path-item">
           <div class="path-item-header">
-            <label class="small">OFFLINE Root</label>
+            <label class="small">IGM Root</label>
             <span id="offlineValidation" class="validation-status"></span>
           </div>
           <div class="path-row-flex">
@@ -160,9 +156,9 @@
               <div class="path-helper-box">
                 <p class="path-helper mono">\\fs61\driftdata\Drift\Arkiv\CGMES\OFFLINE\</p>
               </div>
-              <button id="copyOfflinePathButton" class="btn btn-icon-copy" aria-label="Copy OFFLINE path" title="Copy path">Copy</button>
+              <button id="copyOfflinePathButton" class="btn btn-icon-copy" aria-label="Copy IGM path" title="Copy path">Copy</button>
             </div>
-            <button id="grantOfflineButton" class="btn btn-secondary grant-btn-right">Grant OFFLINE Root</button>
+            <button id="grantOfflineButton" class="btn btn-secondary grant-btn-right">Grant IGM Root</button>
           </div>
         </div>
         <div class="path-item">
