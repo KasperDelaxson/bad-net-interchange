@@ -806,16 +806,11 @@ async function scanSources() {
   state.latestCgmaFileHandle = cgma.best.handle;
   state.latestCgmaPathLabel = cgma.best.pathLabel;
 
-  const versionSet = new Set();
-  for (const f of igm.files) {
-    const fileName = f.handle?.name || f.name;
-    const parsed = parseSshFilename(fileName);
-    if (parsed) {
-      versionSet.add(parsed.version);
-    }
-  }
-
-  fillVersionSelect([...versionSet]);
+  // NOTE: The version <select> is intentionally NOT populated here from
+  // filename parsing. Filenames can advertise versions (e.g. 005) that turn
+  // out to be invalid once the XML is parsed (Model.created > Model.scenarioTime).
+  // The dropdown is populated/refreshed in runComparison() after that filter
+  // has run, so users can only ever pick versions that actually exist.
 }
 
 function computeVersionCreatedMap(igmRecords) {
@@ -1281,6 +1276,12 @@ async function runComparison() {
   state.cachedCgmaEntries = cgmaEntries;
   state.versionCreatedMap = computeVersionCreatedMap(igmRecords);
   state.discardedInvalidCreated = discardedInvalidCreated;
+
+  // Populate the version dropdown ONLY with versions that survived the
+  // Model.created <= Model.scenarioTime sanity check. This guarantees every
+  // option in the list is selectable and will produce real matches.
+  const survivingVersions = new Set(igmRecords.map((r) => String(r.ssh_version)));
+  fillVersionSelect([...survivingVersions]);
 
   const selectedVersion = reconcileSelectedVersion(igmRecords);
   setProgress("Comparing records...", 0.93);
