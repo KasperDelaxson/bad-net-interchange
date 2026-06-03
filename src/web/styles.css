@@ -573,7 +573,7 @@ th {
   word-break: break-word;
 }
 
-#filesInfoPanel .files-popover-title + .files-popover-title {
+#filesInfoPanel .files-popover-title--separated {
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid rgba(167, 225, 255, 0.18);
