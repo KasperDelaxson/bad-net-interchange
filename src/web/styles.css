@@ -550,16 +550,20 @@ th {
   word-break: break-word;
 }
 
-#debugInfoPanel .folder-status-compact {
+#filesInfoPanel .folder-status-compact {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 8px;
 }
 
-#debugInfoPanel .debug-info-line {
+#filesInfoPanel .debug-info-line {
   margin-top: 6px;
   word-break: break-word;
+}
+
+#filesInfoPanel .files-popover-title + .files-popover-title {
+  margin-top: 12px;
 }
 
 .settings-dialog {
