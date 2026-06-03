@@ -21,19 +21,10 @@
         </div>
         <div class="actions">
           <div class="files-info-anchor">
-            <button id="filesInfoButton" class="btn-icon btn-icon-inline" aria-label="Show files used" title="Show files used">
+            <button id="filesInfoButton" class="btn-icon btn-icon-inline" aria-label="Show debug and files info" title="Show debug and files info">
               <span class="info-icon">?</span>
             </button>
-            <div id="filesInfoPanel" class="files-popover hidden" role="dialog" aria-label="Files used for comparison">
-              <div class="files-popover-title">Files Used</div>
-              <pre id="filesUsedContent" class="files-popover-content mono">No files loaded yet.</pre>
-            </div>
-          </div>
-          <div class="files-info-anchor">
-            <button id="debugInfoButton" class="btn-icon btn-icon-inline" aria-label="Show debug info" title="Show debug info">
-              <span class="info-icon" aria-hidden="true">&#x1F41E;</span>
-            </button>
-            <div id="debugInfoPanel" class="files-popover hidden" role="dialog" aria-label="Debug information">
+            <div id="filesInfoPanel" class="files-popover hidden" role="dialog" aria-label="Debug and files information">
               <div class="files-popover-title">Debug Info</div>
               <div id="folderStatusCompact" class="folder-status-compact" aria-live="polite">
                 <span id="offlineStatusPillCompact" class="status-pill status-missing">IGM not granted</span>
@@ -41,6 +32,8 @@
               </div>
               <div id="selectionInfo" class="small debug-info-line"></div>
               <div id="resultSummary" class="small debug-info-line">Waiting for folder access...</div>
+              <div class="files-popover-title">Files Used</div>
+              <pre id="filesUsedContent" class="files-popover-content mono">No files loaded yet.</pre>
             </div>
           </div>
           <button id="refreshButton" class="btn">Reload Data</button>
