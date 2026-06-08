@@ -431,6 +431,8 @@ select {
 
 .tabs-container {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   margin-top: 10px;
   margin-bottom: 12px;
@@ -455,6 +457,69 @@ select {
 .tab-button.active {
   color: var(--teal-bright);
   border-bottom-color: var(--teal-bright);
+}
+
+/* Inline hint sitting between the tabs and the scenario date, explaining
+   how to interpret the sign of the IGM vs CGMA difference. */
+.diff-hint {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-left: 16px;
+  padding: 6px 12px;
+  align-self: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(13, 26, 37, 0.55);
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.diff-hint__label {
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.diff-hint__rule {
+  display: inline-flex;
+  align-items: center;
+}
+
+.diff-hint__sign {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.diff-hint__sign--pos {
+  color: var(--bad);
+  background: rgba(241, 120, 109, 0.14);
+  border: 1px solid rgba(241, 120, 109, 0.35);
+}
+
+.diff-hint__sign--neg {
+  color: var(--good);
+  background: rgba(98, 209, 129, 0.14);
+  border: 1px solid rgba(98, 209, 129, 0.35);
+}
+
+.diff-hint__sep {
+  color: var(--line-strong);
+  user-select: none;
 }
 
 .table-card {
@@ -802,6 +867,13 @@ th {
   .output-toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .diff-hint {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+    white-space: normal;
   }
 }
 
