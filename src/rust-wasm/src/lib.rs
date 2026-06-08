@@ -34,7 +34,6 @@ pub struct ComparisonRow {
     pub ssh_net_interchange_mw: f64,
     pub cgma_net_position_mw: f64,
     pub difference_mw: f64,
-    pub abs_difference_mw: f64,
     pub status: String,
     pub ssh_file: String,
 }
@@ -367,6 +366,9 @@ pub fn compare_records(
     for ((_timestamp, _area), rec) in latest_map {
         if let Some(cgma) = cgma_map.get(&(rec.aligned_timestamp.clone(), rec.area.clone())) {
             let diff = rec.ssh_net_interchange_mw - *cgma;
+            // Magnitude only drives the status bucket; the displayed value
+            // keeps its sign so users can see whether IGM over- or
+            // under-states the CGMA reference.
             let abs_diff = diff.abs();
             let status = if abs_diff >= error_limit {
                 "ERROR"
@@ -386,7 +388,6 @@ pub fn compare_records(
                 ssh_net_interchange_mw: rec.ssh_net_interchange_mw,
                 cgma_net_position_mw: *cgma,
                 difference_mw: diff,
-                abs_difference_mw: abs_diff,
                 status,
                 ssh_file: rec.ssh_file,
             });
