@@ -145,12 +145,13 @@
       <h2>Control Room Setup</h2>
       <div id="onboardingContent" class="onboarding-section">
         <p><strong>Welcome to CGMA vs IGM Comparator</strong></p>
-        <p>This control center application compares latest SSH grid scenarios against CGMA inhouse net positions.</p>
+        <p>This control center compares latest SSH grid scenarios against CGMA inhouse net positions. To do that, the browser needs read access to two SMB network shares.</p>
         <p><strong>Getting Started:</strong></p>
         <ol>
-          <li>Grant access to both SMB network shares below</li>
-          <li>The comparison will run automatically once folders are verified</li>
-          <li>Use the Diff, Compare, and Tables tabs to view results</li>
+          <li>Use <strong>Chrome</strong> or <strong>Edge</strong> &mdash; access granting is not available in Firefox or Safari.</li>
+          <li>For each share below, follow the three steps to grant read access (see the <em>How to grant access</em> box inside each card).</li>
+          <li>Once both shares show <strong>&check; Granted</strong>, the comparison runs automatically.</li>
+          <li>Use the Diff, Compare, and Tables tabs to view results.</li>
         </ol>
       </div>
 
@@ -169,6 +170,14 @@
             </div>
             <button id="grantOfflineButton" class="btn btn-secondary grant-btn-right">Grant IGM Root</button>
           </div>
+          <details class="path-howto">
+            <summary>How to grant access</summary>
+            <ol class="howto-steps">
+              <li>Click <strong>Copy</strong> to put the path above on your clipboard.</li>
+              <li>Click <strong>Grant IGM Root</strong>. A folder picker opens.</li>
+              <li>Paste the path into the picker's address bar, press <kbd>Enter</kbd>, then click the confirm button &mdash; usually <strong>Select Folder</strong> (Chrome / Edge on Windows), but it may read <em>Open</em>, <em>Choose</em> or <em>Select</em> depending on your browser and OS.</li>
+            </ol>
+          </details>
         </div>
         <div class="path-item">
           <div class="path-item-header">
@@ -184,8 +193,36 @@
             </div>
             <button id="grantCgmaButton" class="btn btn-secondary grant-btn-right">Grant CGMA Root</button>
           </div>
+          <details class="path-howto">
+            <summary>How to grant access</summary>
+            <ol class="howto-steps">
+              <li>Click <strong>Copy</strong> to put the path above on your clipboard.</li>
+              <li>Click <strong>Grant CGMA Root</strong>. A folder picker opens.</li>
+              <li>Paste the path into the picker's address bar, press <kbd>Enter</kbd>, then click the confirm button &mdash; usually <strong>Select Folder</strong> (Chrome / Edge on Windows), but it may read <em>Open</em>, <em>Choose</em> or <em>Select</em> depending on your browser and OS.</li>
+            </ol>
+          </details>
         </div>
       </div>
+
+      <details class="troubleshooting-section">
+        <summary>Troubleshooting</summary>
+        <dl class="troubleshooting-list">
+          <dt>The picker won't accept the SMB path.</dt>
+          <dd>Make sure the share is mounted in Windows Explorer first (open it once in <em>File Explorer</em>). Then paste the path into the picker's address bar and press <kbd>Enter</kbd> before clicking the confirm button.</dd>
+
+          <dt>I don't see a <em>Grant</em> button, or nothing happens when I click it.</dt>
+          <dd>The folder picker is only available in Chromium-based browsers (Chrome, Edge). Open the page in Chrome or Edge instead of Firefox or Safari.</dd>
+
+          <dt>I'm being asked to grant access again on a new visit.</dt>
+          <dd>The browser may have cleared site data or revoked the permission. Just repeat the grant steps &mdash; nothing is broken and previous results are not lost.</dd>
+
+          <dt>The comparison doesn't start after I grant both shares.</dt>
+          <dd>Check that both rows above show <strong>&check; Granted</strong>. If one still says <em>Pending</em>, click its <em>Grant</em> button again. You can also enable debug logging below and check the browser console for errors.</dd>
+
+          <dt>What does this tool do with my credentials?</dt>
+          <dd>Nothing &mdash; the tool only reads files through the browser's folder picker using your existing Windows session. No passwords are entered, stored, or transmitted.</dd>
+        </dl>
+      </details>
 
       <label class="settings-toggle" for="debugEnabledCheckbox">
         <input id="debugEnabledCheckbox" type="checkbox" />
