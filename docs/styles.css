@@ -489,6 +489,20 @@ select {
 .diff-hint__rule {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
+}
+
+.diff-hint__action {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.diff-hint__action--remove {
+  color: var(--bad);
+}
+
+.diff-hint__action--add {
+  color: var(--good);
 }
 
 .diff-hint__sign {
