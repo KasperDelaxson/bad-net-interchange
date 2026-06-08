@@ -486,7 +486,7 @@ select {
 }
 
 .diff-hint__rule {
-  display: inline;
+  display: block;
   white-space: nowrap;
 }
 
@@ -522,12 +522,6 @@ select {
   color: var(--text);
   background: var(--bg-soft);
   border: 1px solid var(--line-strong);
-}
-
-.diff-hint__sep {
-  color: var(--line-strong);
-  user-select: none;
-  margin: 0 6px;
 }
 
 .table-card {
