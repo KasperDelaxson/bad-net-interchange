@@ -343,6 +343,25 @@ function getDiffSigned(row) {
   return Number(row.difference_mw) || 0;
 }
 
+/**
+ * Returns a symmetric { min, max } range centred on zero, sized to the
+ * largest absolute deviation in `rows`. Used by the diff charts so that
+ * positive and negative excursions are visually comparable and the zero
+ * gridline always sits at the vertical centre.
+ *
+ * - `padding` adds breathing room so peak points don't kiss the axis edge.
+ * - `floor` ensures a sensible visible range when all diffs are ~0.
+ */
+function computeSymmetricDiffRange(rows, { padding = 0.1, floor = 1 } = {}) {
+  let maxAbs = 0;
+  for (const r of rows) {
+    const v = Math.abs(getDiffSigned(r));
+    if (v > maxAbs) maxAbs = v;
+  }
+  const bound = Math.max(maxAbs * (1 + padding), floor);
+  return { min: -bound, max: bound };
+}
+
 function setResultSummary(message) {
   el.resultSummary.textContent = message;
 }
@@ -1077,9 +1096,9 @@ function renderDiffChartsView(rows) {
               : 'rgba(167, 225, 255, 0.1)',
             lineWidth: (ctx) => ctx.tick.value === 0 ? 1.5 : 1
           },
-          title: { display: true, text: 'Difference (MW)', color: '#a4bfd0' },
-          suggestedMin: 0,
-          suggestedMax: 0
+          title: { display: true, text: 'Difference (MW)', color: '#a4bfd0' }
+          // NOTE: suggestedMin/suggestedMax are set per-chart below so DK1
+          // and DK2 are scaled independently around a symmetric zero.
         }
       }
     }
@@ -1089,8 +1108,20 @@ function renderDiffChartsView(rows) {
   if (dk1Rows.length > 0) {
     const dk1Ctx = el.diffChartDk1.getContext('2d');
     if (window.diffDk1Chart) window.diffDk1Chart.destroy();
+    const dk1Range = computeSymmetricDiffRange(dk1Rows);
     window.diffDk1Chart = new Chart(dk1Ctx, {
       ...chartConfig,
+      options: {
+        ...chartConfig.options,
+        scales: {
+          ...chartConfig.options.scales,
+          y: {
+            ...chartConfig.options.scales.y,
+            suggestedMin: dk1Range.min,
+            suggestedMax: dk1Range.max
+          }
+        }
+      },
       data: {
         labels: dk1Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [{
@@ -1114,8 +1145,20 @@ function renderDiffChartsView(rows) {
   if (dk2Rows.length > 0) {
     const dk2Ctx = el.diffChartDk2.getContext('2d');
     if (window.diffDk2Chart) window.diffDk2Chart.destroy();
+    const dk2Range = computeSymmetricDiffRange(dk2Rows);
     window.diffDk2Chart = new Chart(dk2Ctx, {
       ...chartConfig,
+      options: {
+        ...chartConfig.options,
+        scales: {
+          ...chartConfig.options.scales,
+          y: {
+            ...chartConfig.options.scales.y,
+            suggestedMin: dk2Range.min,
+            suggestedMax: dk2Range.max
+          }
+        }
+      },
       data: {
         labels: dk2Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [{
