@@ -463,9 +463,11 @@ select {
    how to interpret the sign of the IGM vs CGMA difference. */
 .diff-hint {
   display: inline-block;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
-  margin-left: 16px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 8px;
   padding: 6px 12px;
   align-self: center;
   border: 1px solid var(--line);
@@ -1016,6 +1018,7 @@ th {
 
   .diff-hint {
     margin-left: 0;
+    margin-right: 0;
     width: 100%;
     justify-content: center;
     white-space: normal;
