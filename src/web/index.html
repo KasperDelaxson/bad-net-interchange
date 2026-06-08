@@ -62,10 +62,17 @@
           <button id="compareTab" class="tab-button">Compare</button>
           <button id="tableTab" class="tab-button">Tables</button>
           <div class="diff-hint" role="note" aria-label="How to interpret the IGM vs CGMA difference">
-            <span class="diff-hint__label">Diff reading:</span>
-            <span class="diff-hint__rule"><span class="diff-hint__sign diff-hint__sign--pos">+</span>&nbsp;REMOVE power from IGM</span>
+            <span class="diff-hint__rule">
+              If the diff is
+              <span class="diff-hint__sign diff-hint__sign--pos">+</span>
+              (positive), you need to <strong class="diff-hint__action diff-hint__action--remove">REMOVE</strong> power from the IGM.
+            </span>
             <span class="diff-hint__sep" aria-hidden="true">|</span>
-            <span class="diff-hint__rule"><span class="diff-hint__sign diff-hint__sign--neg">&minus;</span>&nbsp;ADD power to IGM</span>
+            <span class="diff-hint__rule">
+              If the diff is
+              <span class="diff-hint__sign diff-hint__sign--neg">&minus;</span>
+              (negative), you need to <strong class="diff-hint__action diff-hint__action--add">ADD</strong> power to the IGM.
+            </span>
           </div>
           <div class="field-row compact-row" style="margin-left: auto; padding:8px 12px;">
             <span class="loaded-date">Scenario Date: <span id="loadedDateLabel">n/a</span></span>
