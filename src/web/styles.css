@@ -496,12 +496,9 @@ select {
   margin: 0 2px;
 }
 
-.diff-hint__action--remove {
-  color: var(--bad);
-}
-
+.diff-hint__action--remove,
 .diff-hint__action--add {
-  color: var(--good);
+  color: var(--text);
 }
 
 .diff-hint__sign {
@@ -520,16 +517,11 @@ select {
   vertical-align: middle;
 }
 
-.diff-hint__sign--pos {
-  color: var(--bad);
-  background: rgba(241, 120, 109, 0.14);
-  border: 1px solid rgba(241, 120, 109, 0.35);
-}
-
+.diff-hint__sign--pos,
 .diff-hint__sign--neg {
-  color: var(--good);
-  background: rgba(98, 209, 129, 0.14);
-  border: 1px solid rgba(98, 209, 129, 0.35);
+  color: var(--text);
+  background: var(--bg-soft);
+  border: 1px solid var(--line-strong);
 }
 
 .diff-hint__sep {
@@ -851,6 +843,149 @@ th {
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+/* In-card "How to grant access" disclosure */
+.path-howto {
+  margin-top: 10px;
+  border-top: 1px dashed rgba(167, 225, 255, 0.18);
+  padding-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+}
+
+.path-howto > summary {
+  cursor: pointer;
+  color: var(--indigo);
+  font-weight: 600;
+  list-style: none;
+  user-select: none;
+  padding: 2px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.path-howto > summary::-webkit-details-marker {
+  display: none;
+}
+
+.path-howto > summary::before {
+  content: "▸";
+  font-size: 0.75rem;
+  transition: transform 150ms ease;
+  display: inline-block;
+}
+
+.path-howto[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.path-howto > summary:hover {
+  color: #8cc7ff;
+}
+
+.howto-steps {
+  margin: 8px 0 2px;
+  padding-left: 22px;
+  line-height: 1.45;
+}
+
+.howto-steps li {
+  margin: 4px 0;
+}
+
+.howto-steps strong {
+  color: var(--text);
+}
+
+.howto-steps em {
+  color: var(--text);
+  font-style: normal;
+  background: rgba(107, 176, 255, 0.10);
+  border: 1px solid rgba(107, 176, 255, 0.18);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+/* Troubleshooting disclosure (sits below the path list) */
+.troubleshooting-section {
+  margin: 14px 0 4px;
+  background: rgba(6, 16, 24, 0.5);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+}
+
+.troubleshooting-section > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--teal-bright);
+  list-style: none;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.troubleshooting-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.troubleshooting-section > summary::before {
+  content: "▸";
+  font-size: 0.8rem;
+  transition: transform 150ms ease;
+  display: inline-block;
+}
+
+.troubleshooting-section[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.troubleshooting-list {
+  margin: 10px 0 2px;
+}
+
+.troubleshooting-list dt {
+  margin-top: 10px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.troubleshooting-list dt:first-of-type {
+  margin-top: 4px;
+}
+
+.troubleshooting-list dd {
+  margin: 4px 0 0;
+  padding-left: 0;
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+
+.troubleshooting-list em {
+  color: var(--text);
+  font-style: normal;
+  background: rgba(107, 176, 255, 0.10);
+  border: 1px solid rgba(107, 176, 255, 0.18);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+/* Inline keyboard / button hint */
+.settings-dialog kbd {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  background: #0a1923;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 6px;
+  line-height: 1.2;
 }
 
 @media (max-width: 980px) {
