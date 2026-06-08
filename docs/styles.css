@@ -462,10 +462,9 @@ select {
 /* Inline hint sitting between the tabs and the scenario date, explaining
    how to interpret the sign of the IGM vs CGMA difference. */
 .diff-hint {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
+  display: inline-block;
+  flex: 1 1 auto;
+  min-width: 0;
   margin-left: 16px;
   padding: 6px 12px;
   align-self: center;
@@ -475,7 +474,7 @@ select {
   color: var(--text-soft);
   font-size: 0.82rem;
   line-height: 1.2;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .diff-hint__label {
@@ -487,14 +486,14 @@ select {
 }
 
 .diff-hint__rule {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: inline;
+  white-space: nowrap;
 }
 
 .diff-hint__action {
   font-weight: 700;
   letter-spacing: 0.02em;
+  margin: 0 2px;
 }
 
 .diff-hint__action--remove {
@@ -512,11 +511,13 @@ select {
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
+  margin: 0 2px;
   border-radius: 4px;
   font-family: "IBM Plex Mono", Consolas, monospace;
   font-weight: 700;
   font-size: 0.85rem;
   line-height: 1;
+  vertical-align: middle;
 }
 
 .diff-hint__sign--pos {
@@ -534,6 +535,7 @@ select {
 .diff-hint__sep {
   color: var(--line-strong);
   user-select: none;
+  margin: 0 6px;
 }
 
 .table-card {
