@@ -336,6 +336,13 @@ function getDiffMagnitude(row) {
   return Math.abs(Number(row.difference_mw) || 0);
 }
 
+// Signed IGM - CGMA difference for display. Positive means IGM > CGMA,
+// negative means IGM < CGMA. Sort still uses getDiffMagnitude so the user
+// can find the largest deviations regardless of sign.
+function getDiffSigned(row) {
+  return Number(row.difference_mw) || 0;
+}
+
 function setResultSummary(message) {
   el.resultSummary.textContent = message;
 }
@@ -1013,7 +1020,7 @@ function renderTablesView(rows) {
       <td>${row.ssh_version}</td>
       <td>${Number(row.ssh_net_interchange_mw).toFixed(3)}</td>
       <td>${Number(row.cgma_net_position_mw).toFixed(3)}</td>
-      <td class="${statusClass}">${getDiffMagnitude(row).toFixed(3)}</td>
+      <td class="${statusClass}">${getDiffSigned(row).toFixed(3)}</td>
     `;
 
     if (row.area === "DK1") {
@@ -1064,8 +1071,15 @@ function renderDiffChartsView(rows) {
         },
         y: {
           ticks: { color: '#a4bfd0' },
-          grid: { color: 'rgba(167, 225, 255, 0.1)' },
-          title: { display: true, text: 'Difference (MW)', color: '#a4bfd0' }
+          grid: {
+            color: (ctx) => ctx.tick.value === 0
+              ? 'rgba(167, 225, 255, 0.55)'
+              : 'rgba(167, 225, 255, 0.1)',
+            lineWidth: (ctx) => ctx.tick.value === 0 ? 1.5 : 1
+          },
+          title: { display: true, text: 'Difference (MW)', color: '#a4bfd0' },
+          suggestedMin: 0,
+          suggestedMax: 0
         }
       }
     }
@@ -1081,7 +1095,7 @@ function renderDiffChartsView(rows) {
         labels: dk1Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [{
           label: 'Difference (SSH - CGMA)',
-          data: dk1Rows.map(r => getDiffMagnitude(r)),
+          data: dk1Rows.map(r => getDiffSigned(r)),
           borderColor: '#4ad5c6',
           backgroundColor: 'rgba(74, 213, 198, 0.1)',
           tension: 0.4,
@@ -1106,7 +1120,7 @@ function renderDiffChartsView(rows) {
         labels: dk2Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [{
           label: 'Difference (SSH - CGMA)',
-          data: dk2Rows.map(r => getDiffMagnitude(r)),
+          data: dk2Rows.map(r => getDiffSigned(r)),
           borderColor: '#6bb0ff',
           backgroundColor: 'rgba(107, 176, 255, 0.1)',
           tension: 0.4,
