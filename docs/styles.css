@@ -462,7 +462,8 @@ select {
 /* Inline hint sitting between the tabs and the scenario date, explaining
    how to interpret the sign of the IGM vs CGMA difference. */
 .diff-hint {
-  display: inline-block;
+  display: inline-flex;
+  flex-direction: column;
   flex: 0 0 auto;
   min-width: 0;
   margin-left: auto;
@@ -1022,6 +1023,14 @@ th {
     width: 100%;
     justify-content: center;
     white-space: normal;
+  }
+
+  .diff-hint__rule {
+    white-space: normal;
+  }
+
+  .diff-hint__sign {
+    white-space: nowrap;
   }
 }
 
