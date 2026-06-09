@@ -1,12 +1,12 @@
 # CGMA vs IGM Comparator
 
-This project compares 2D SSH scenarios from IGM and CGMA inhouse net positions, providing both a command-line tool and a browser-based web app powered by Rust and WebAssembly (WASM).
+This project compares 2D SSH scenarios from IGM and CGMA in-house net positions, providing both a command-line tool and a browser-based web app powered by Rust and WebAssembly (WASM).
 
 
 
 # CGMA vs IGM Comparator
 
-A modern, high-performance tool for comparing 2D SSH scenarios from IGM and CGMA inhouse net positions. This project features a browser-based web app powered by Rust and WebAssembly (WASM) for fast, client-side XML parsing and comparison.
+A modern, high-performance tool for comparing 2D SSH scenarios from IGM and CGMA in-house net positions. This project features a browser-based web app powered by Rust and WebAssembly (WASM) for fast, client-side XML parsing and comparison.
 
 ---
 
