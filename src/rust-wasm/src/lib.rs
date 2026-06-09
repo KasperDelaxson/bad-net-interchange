@@ -365,7 +365,7 @@ pub fn compare_records(
 
     for ((_timestamp, _area), rec) in latest_map {
         if let Some(cgma) = cgma_map.get(&(rec.aligned_timestamp.clone(), rec.area.clone())) {
-            let diff = rec.ssh_net_interchange_mw - *cgma;
+            let diff = *cgma - rec.ssh_net_interchange_mw;
             // Magnitude only drives the status bucket; the displayed value
             // keeps its sign so users can see whether IGM over- or
             // under-states the CGMA reference.
