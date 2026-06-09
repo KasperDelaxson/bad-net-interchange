@@ -1,6 +1,6 @@
 # Network Node Monitor (NNM)
 
-This project compares 2D SSH scenarios from IGM and CGMA in-house net positions, providing both a command-line tool and a browser-based web app powered by Rust and WebAssembly (WASM).
+This project compares 2D IGM (SSH) scenarios from IGM and CGMA in-house net positions, providing both a command-line tool and a browser-based web app powered by Rust and WebAssembly (WASM).
 
 
 

@@ -1125,7 +1125,7 @@ function renderDiffChartsView(rows) {
       data: {
         labels: dk1Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [{
-          label: 'Difference (IGM - CGMA)',
+          label: 'Difference (CGMA - IGM)',
           data: dk1Rows.map(r => getDiffSigned(r)),
           borderColor: '#4ad5c6',
           backgroundColor: 'rgba(74, 213, 198, 0.1)',
@@ -1162,7 +1162,7 @@ function renderDiffChartsView(rows) {
       data: {
         labels: dk2Rows.map(r => formatTsCopenhagen(r.aligned_timestamp)),
         datasets: [{
-          label: 'Difference (IGM - CGMA)',
+          label: 'Difference (CGMA - IGM)',
           data: dk2Rows.map(r => getDiffSigned(r)),
           borderColor: '#6bb0ff',
           backgroundColor: 'rgba(107, 176, 255, 0.1)',
