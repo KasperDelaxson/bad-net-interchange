@@ -1039,7 +1039,7 @@ function renderTablesView(rows) {
       <td>${row.ssh_version}</td>
       <td>${Number(row.ssh_net_interchange_mw).toFixed(3)}</td>
       <td>${Number(row.cgma_net_position_mw).toFixed(3)}</td>
-      <td class="${statusClass}">${getDiffSigned(row).toFixed(3)}</td>
+      <td class="${statusClass}">${getDiffSigned(row).toLocaleString('en-US', { signDisplay: 'exceptZero', minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>
     `;
 
     if (row.area === "DK1") {
