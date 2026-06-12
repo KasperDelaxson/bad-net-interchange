@@ -341,6 +341,10 @@ async function refreshStoredHandlePresence() {
 // need a number for layout/sort math can fall back with `?? 0`; callers that
 // show data to the user should treat null as an error to surface, not as 0.
 function toFiniteOrNull(value) {
+  // Number(null), Number(undefined as ""), and Number("") all coerce to 0, so
+  // guard those first; otherwise invalid/blank data would masquerade as a real 0.
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
 }
@@ -1051,7 +1055,7 @@ const INVALID_VALUE_LABEL = "ERROR";
 
 // Formats a plain MW figure for a table cell, or INVALID_VALUE_LABEL when the
 // value isn't finite. Used for the SSH and CGMA columns. MW is shown as a
-// whole number (nearest integer, halves round up); the underlying value is
+// whole number (rounded to the nearest integer); the underlying value is
 // never altered, only the display.
 function formatMwCell(value) {
   const num = toFiniteOrNull(value);
@@ -1125,7 +1129,12 @@ function renderDiffChartsView(rows) {
         tooltip: {
           callbacks: {
             // Show MW as a whole number on hover; raw value is unchanged.
-            label: (ctx) => `${ctx.dataset.label}: ${Number.isFinite(ctx.parsed.y) ? Math.round(ctx.parsed.y) : ctx.parsed.y} MW`
+            // Reuse the shared formatting so invalid data and .5 rounding
+            // match the table and clipboard exactly.
+            label: (ctx) => {
+              const y = toFiniteOrNull(ctx.parsed.y);
+              return `${ctx.dataset.label}: ${y === null ? INVALID_VALUE_LABEL : y.toFixed(0)} MW`;
+            }
           }
         }
       },
@@ -1252,7 +1261,12 @@ function renderCompareChartsView(rows) {
         tooltip: {
           callbacks: {
             // Show MW as a whole number on hover; raw value is unchanged.
-            label: (ctx) => `${ctx.dataset.label}: ${Number.isFinite(ctx.parsed.y) ? Math.round(ctx.parsed.y) : ctx.parsed.y} MW`
+            // Reuse the shared formatting so invalid data and .5 rounding
+            // match the table and clipboard exactly.
+            label: (ctx) => {
+              const y = toFiniteOrNull(ctx.parsed.y);
+              return `${ctx.dataset.label}: ${y === null ? INVALID_VALUE_LABEL : y.toFixed(0)} MW`;
+            }
           }
         }
       },
@@ -1703,8 +1717,8 @@ function copyPathFromElement(buttonElement, pathText) {
 }
 
 /**
- * Formats a Diff MW value for Excel pasting: whole number (nearest integer,
- * halves round up), leading "-" for negatives, NO leading "+" for positives.
+ * Formats a Diff MW value for Excel pasting: whole number (rounded to the
+ * nearest integer), leading "-" for negatives, NO leading "+" for positives.
  * Zero is emitted as "0". A non-finite value is emitted as "ERROR" rather
  * than "0" so a bad row stands out in the spreadsheet instead of
  * masquerading as a real zero difference.
