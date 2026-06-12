@@ -1046,14 +1046,16 @@ function sortRows(rows) {
 
 // Marker shown wherever a numeric field can't be parsed as a finite number,
 // so a data/parsing fault is immediately visible instead of being silently
-// rendered as 0.000 (which would read as a perfect match).
+// rendered as 0 (which would read as a perfect match).
 const INVALID_VALUE_LABEL = "ERROR";
 
 // Formats a plain MW figure for a table cell, or INVALID_VALUE_LABEL when the
-// value isn't finite. Used for the SSH and CGMA columns.
+// value isn't finite. Used for the SSH and CGMA columns. MW is shown as a
+// whole number (nearest integer, halves round up); the underlying value is
+// never altered, only the display.
 function formatMwCell(value) {
   const num = toFiniteOrNull(value);
-  return num === null ? INVALID_VALUE_LABEL : num.toFixed(3);
+  return num === null ? INVALID_VALUE_LABEL : num.toFixed(0);
 }
 
 function renderTablesView(rows) {
@@ -1070,7 +1072,7 @@ function renderTablesView(rows) {
     const diffClass = signedDiff === null ? "status-error" : statusClass;
     const diffText = signedDiff === null
       ? INVALID_VALUE_LABEL
-      : signedDiff.toLocaleString('en-US', { signDisplay: 'exceptZero', minimumFractionDigits: 3, maximumFractionDigits: 3 });
+      : signedDiff.toLocaleString('en-US', { signDisplay: 'exceptZero', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
     tr.innerHTML = `
       <td>${formatTsCopenhagen(row.aligned_timestamp)}</td>
@@ -1119,6 +1121,12 @@ function renderDiffChartsView(rows) {
       plugins: {
         legend: {
           labels: { color: '#e8f6ff' }
+        },
+        tooltip: {
+          callbacks: {
+            // Show MW as a whole number on hover; raw value is unchanged.
+            label: (ctx) => `${ctx.dataset.label}: ${Number.isFinite(ctx.parsed.y) ? Math.round(ctx.parsed.y) : ctx.parsed.y} MW`
+          }
         }
       },
       scales: {
@@ -1240,6 +1248,12 @@ function renderCompareChartsView(rows) {
       plugins: {
         legend: {
           labels: { color: '#e8f6ff' }
+        },
+        tooltip: {
+          callbacks: {
+            // Show MW as a whole number on hover; raw value is unchanged.
+            label: (ctx) => `${ctx.dataset.label}: ${Number.isFinite(ctx.parsed.y) ? Math.round(ctx.parsed.y) : ctx.parsed.y} MW`
+          }
         }
       },
       scales: {
@@ -1689,16 +1703,15 @@ function copyPathFromElement(buttonElement, pathText) {
 }
 
 /**
- * Formats a Diff MW value for Excel pasting: 3 decimals, leading "-" for
- * negatives, NO leading "+" for positives, "." as decimal separator (so
- * Excel parses it as a number using its current locale or after a
- * Text-to-Columns step). Zero is emitted as "0.000". A non-finite value
- * is emitted as "ERROR" rather than "0.000" so a bad row stands out in the
- * spreadsheet instead of masquerading as a real zero difference.
+ * Formats a Diff MW value for Excel pasting: whole number (nearest integer,
+ * halves round up), leading "-" for negatives, NO leading "+" for positives.
+ * Zero is emitted as "0". A non-finite value is emitted as "ERROR" rather
+ * than "0" so a bad row stands out in the spreadsheet instead of
+ * masquerading as a real zero difference.
  */
 function formatDiffForClipboard(value) {
   const num = toFiniteOrNull(value);
-  return num === null ? INVALID_VALUE_LABEL : num.toFixed(3);
+  return num === null ? INVALID_VALUE_LABEL : num.toFixed(0);
 }
 
 /**
