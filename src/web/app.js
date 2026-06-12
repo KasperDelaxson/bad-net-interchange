@@ -334,15 +334,29 @@ async function refreshStoredHandlePresence() {
   state.hasStoredHandles = Boolean(offline && cgma);
 }
 
-function getDiffMagnitude(row) {
-  return Math.abs(Number(row.difference_mw) || 0);
+// Coerces `value` to a finite number, or returns null when it is not a real
+// number (NaN, +/-Infinity, null, undefined, non-numeric strings, ...).
+// Use this instead of `Number(x) || 0`: that idiom silently turns invalid
+// data AND a legitimate 0 into 0, hiding errors from the user. Callers that
+// need a number for layout/sort math can fall back with `?? 0`; callers that
+// show data to the user should treat null as an error to surface, not as 0.
+function toFiniteOrNull(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
 }
 
-// Signed IGM - CGMA difference for display. Positive means IGM > CGMA,
-// negative means IGM < CGMA. Sort still uses getDiffMagnitude so the user
-// can find the largest deviations regardless of sign.
+// Sort magnitude. `?? 0` keeps an invalid row sortable (it sinks to the
+// bottom) without pretending non-finite data is a real value elsewhere.
+function getDiffMagnitude(row) {
+  return Math.abs(toFiniteOrNull(row.difference_mw) ?? 0);
+}
+
+// Signed IGM - CGMA difference. Positive means IGM > CGMA, negative means
+// IGM < CGMA. Sort still uses getDiffMagnitude so the user can find the
+// largest deviations regardless of sign. Returns null for invalid data so
+// display/export code can render a visible error instead of a fake 0.
 function getDiffSigned(row) {
-  return Number(row.difference_mw) || 0;
+  return toFiniteOrNull(row.difference_mw);
 }
 
 /**
@@ -357,7 +371,9 @@ function getDiffSigned(row) {
 function computeSymmetricDiffRange(rows, { padding = 0.1, floor = 1 } = {}) {
   let maxAbs = 0;
   for (const r of rows) {
-    const v = Math.abs(getDiffSigned(r));
+    const signed = getDiffSigned(r);
+    if (signed === null) continue; // invalid rows don't size the axis
+    const v = Math.abs(signed);
     if (v > maxAbs) maxAbs = v;
   }
   const bound = Math.max(maxAbs * (1 + padding), floor);
@@ -1028,6 +1044,20 @@ function sortRows(rows) {
   return sorted;
 }
 
+// Marker shown wherever a numeric field can't be parsed as a finite number,
+// so a data/parsing fault is immediately visible instead of being silently
+// rendered as 0 (which would read as a perfect match).
+const INVALID_VALUE_LABEL = "ERROR";
+
+// Formats a plain MW figure for a table cell, or INVALID_VALUE_LABEL when the
+// value isn't finite. Used for the SSH and CGMA columns. MW is shown as a
+// whole number (nearest integer, halves round up); the underlying value is
+// never altered, only the display.
+function formatMwCell(value) {
+  const num = toFiniteOrNull(value);
+  return num === null ? INVALID_VALUE_LABEL : num.toFixed(0);
+}
+
 function renderTablesView(rows) {
   clearResults();
   const sorted = sortRows(rows);
@@ -1036,12 +1066,20 @@ function renderTablesView(rows) {
     const tr = document.createElement("tr");
     const statusClass = `status-${String(row.status).toLowerCase()}`;
 
+    // Diff cell: show the signed value, or a clearly-flagged error. A bad
+    // diff forces the error style regardless of the row's reported status.
+    const signedDiff = getDiffSigned(row);
+    const diffClass = signedDiff === null ? "status-error" : statusClass;
+    const diffText = signedDiff === null
+      ? INVALID_VALUE_LABEL
+      : signedDiff.toLocaleString('en-US', { signDisplay: 'exceptZero', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
     tr.innerHTML = `
       <td>${formatTsCopenhagen(row.aligned_timestamp)}</td>
       <td>${row.ssh_version}</td>
-      <td>${Number(row.ssh_net_interchange_mw).toFixed(3)}</td>
-      <td>${Number(row.cgma_net_position_mw).toFixed(3)}</td>
-      <td class="${statusClass}">${getDiffSigned(row).toLocaleString('en-US', { signDisplay: 'exceptZero', minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>
+      <td>${formatMwCell(row.ssh_net_interchange_mw)}</td>
+      <td>${formatMwCell(row.cgma_net_position_mw)}</td>
+      <td class="${diffClass}">${diffText}</td>
     `;
 
     if (row.area === "DK1") {
@@ -1083,6 +1121,12 @@ function renderDiffChartsView(rows) {
       plugins: {
         legend: {
           labels: { color: '#e8f6ff' }
+        },
+        tooltip: {
+          callbacks: {
+            // Show MW as a whole number on hover; raw value is unchanged.
+            label: (ctx) => `${ctx.dataset.label}: ${Number.isFinite(ctx.parsed.y) ? Math.round(ctx.parsed.y) : ctx.parsed.y} MW`
+          }
         }
       },
       scales: {
@@ -1204,6 +1248,12 @@ function renderCompareChartsView(rows) {
       plugins: {
         legend: {
           labels: { color: '#e8f6ff' }
+        },
+        tooltip: {
+          callbacks: {
+            // Show MW as a whole number on hover; raw value is unchanged.
+            label: (ctx) => `${ctx.dataset.label}: ${Number.isFinite(ctx.parsed.y) ? Math.round(ctx.parsed.y) : ctx.parsed.y} MW`
+          }
         }
       },
       scales: {
@@ -1653,14 +1703,15 @@ function copyPathFromElement(buttonElement, pathText) {
 }
 
 /**
- * Formats a Diff MW value for Excel pasting: 3 decimals, leading "-" for
- * negatives, NO leading "+" for positives, "." as decimal separator (so
- * Excel parses it as a number using its current locale or after a
- * Text-to-Columns step). Zero is emitted as "0.000".
+ * Formats a Diff MW value for Excel pasting: whole number (nearest integer,
+ * halves round up), leading "-" for negatives, NO leading "+" for positives.
+ * Zero is emitted as "0". A non-finite value is emitted as "ERROR" rather
+ * than "0" so a bad row stands out in the spreadsheet instead of
+ * masquerading as a real zero difference.
  */
 function formatDiffForClipboard(value) {
-  const num = Number(value) || 0;
-  return num.toFixed(3);
+  const num = toFiniteOrNull(value);
+  return num === null ? INVALID_VALUE_LABEL : num.toFixed(0);
 }
 
 /**
