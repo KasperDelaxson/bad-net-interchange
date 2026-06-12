@@ -813,6 +813,54 @@ th {
   transform: scale(0.98);
 }
 
+/* Compact copy button used inside table headers (e.g. Diff MW column). */
+.th-with-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-icon-copy-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: rgba(107, 176, 255, 0.10);
+  border: 1px solid rgba(107, 176, 255, 0.22);
+  border-radius: 5px;
+  color: var(--indigo);
+  cursor: pointer;
+  transition: all 150ms ease;
+  /* Prevent the column-sort click handler from inheriting the header's pointer/text cursor */
+  text-transform: none;
+  letter-spacing: 0;
+  flex-shrink: 0;
+}
+
+.btn-icon-copy-sm:hover {
+  background: rgba(107, 176, 255, 0.22);
+  border-color: rgba(107, 176, 255, 0.38);
+  color: #8cc7ff;
+}
+
+.btn-icon-copy-sm:active {
+  transform: scale(0.94);
+}
+
+.btn-icon-copy-sm.is-copied {
+  background: rgba(98, 209, 129, 0.18);
+  border-color: rgba(98, 209, 129, 0.45);
+  color: var(--good);
+}
+
+.btn-icon-copy-sm .icon-copy,
+.btn-icon-copy-sm .icon-check {
+  display: block;
+  pointer-events: none;
+}
+
 .path-row {
   margin-top: 8px;
   display: grid;

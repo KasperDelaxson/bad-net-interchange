@@ -111,7 +111,17 @@
                     <th data-sort="ssh_version">Version</th>
                     <th data-sort="ssh_net_interchange_mw">IGM MW</th>
                     <th title="CGMA net position in MW, calculated as the (B65 out_domain - B65 in_domain)" data-sort="cgma_net_position_mw">CGMA MW</th>
-                    <th title="Difference between CGMA and IGM net position, calculated as (CGMA - IGM) MW" data-sort="difference_mw">Diff MW</th>
+                    <th title="Difference between CGMA and IGM net position, calculated as (CGMA - IGM) MW" data-sort="difference_mw">
+                      <span class="th-with-action">
+                        <span>Diff MW</span>
+                        <button id="copyDiffDk1Button" type="button" class="btn-icon-copy-sm" aria-label="Copy DK1 Diff MW values to clipboard" title="Copy Diff MW values (paste into Excel)">
+                          <svg class="icon-copy" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+                            <rect x="9" y="9" width="11" height="11" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                            <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                          </svg>
+                        </button>
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody id="resultBodyDk1"></tbody>
@@ -128,7 +138,17 @@
                     <th data-sort="ssh_version">Version</th>
                     <th data-sort="ssh_net_interchange_mw">IGM MW</th>
                     <th title="CGMA net position in MW, calculated as the (B65 out_domain - B65 in_domain)" data-sort="cgma_net_position_mw">CGMA MW</th>
-                    <th title="Difference between CGMA and IGM net position, calculated as (CGMA - IGM) MW" data-sort="difference_mw">Diff MW</th>
+                    <th title="Difference between CGMA and IGM net position, calculated as (CGMA - IGM) MW" data-sort="difference_mw">
+                      <span class="th-with-action">
+                        <span>Diff MW</span>
+                        <button id="copyDiffDk2Button" type="button" class="btn-icon-copy-sm" aria-label="Copy DK2 Diff MW values to clipboard" title="Copy Diff MW values (paste into Excel)">
+                          <svg class="icon-copy" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+                            <rect x="9" y="9" width="11" height="11" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                            <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                          </svg>
+                        </button>
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody id="resultBodyDk2"></tbody>

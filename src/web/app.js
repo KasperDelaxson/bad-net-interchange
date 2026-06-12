@@ -52,6 +52,8 @@ const el = {
   compareChartDk2: document.getElementById("compareChartDk2"),
   resultBodyDk1: document.getElementById("resultBodyDk1"),
   resultBodyDk2: document.getElementById("resultBodyDk2"),
+  copyDiffDk1Button: document.getElementById("copyDiffDk1Button"),
+  copyDiffDk2Button: document.getElementById("copyDiffDk2Button"),
   loaderCard: document.getElementById("loaderCard"),
   progressFill: document.getElementById("progressFill"),
   progressText: document.getElementById("progressText"),
@@ -1650,6 +1652,85 @@ function copyPathFromElement(buttonElement, pathText) {
     });
 }
 
+/**
+ * Formats a Diff MW value for Excel pasting: 3 decimals, leading "-" for
+ * negatives, NO leading "+" for positives, "." as decimal separator (so
+ * Excel parses it as a number using its current locale or after a
+ * Text-to-Columns step). Zero is emitted as "0.000".
+ */
+function formatDiffForClipboard(value) {
+  const num = Number(value) || 0;
+  return num.toFixed(3);
+}
+
+/**
+ * Collects the Diff MW values for a given area ("DK1" or "DK2") in the
+ * currently displayed sort order and copies them to the clipboard, one
+ * value per line so Excel fills a column on paste. Positive signs are
+ * stripped, negatives keep their "-".
+ */
+function copyDiffColumnForArea(buttonElement, area) {
+  if (!state.comparisonData) {
+    setResultSummary("No data available to copy yet.");
+    return;
+  }
+
+  const sorted = sortRows(state.comparisonData);
+  const values = sorted
+    .filter((row) => row.area === area)
+    .map((row) => formatDiffForClipboard(getDiffSigned(row)));
+
+  if (values.length === 0) {
+    setResultSummary(`No ${area} rows to copy.`);
+    return;
+  }
+
+  // One value per line => Excel pastes them vertically into a single column.
+  const text = values.join("\n");
+
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      flashCopyButton(buttonElement);
+      debugLog.log(`Copied ${values.length} ${area} Diff MW value(s) to clipboard`);
+    })
+    .catch((err) => {
+      debugLog.log(`Failed to copy ${area} Diff MW values: ${err}`, "error");
+      setResultSummary(`Failed to copy ${area} Diff MW values to clipboard.`);
+    });
+}
+
+/**
+ * Briefly swaps the copy icon for a check mark to confirm a successful copy,
+ * then restores the original SVG. Pure visual feedback; no state changes.
+ */
+function flashCopyButton(buttonElement) {
+  if (!buttonElement) {
+    return;
+  }
+  // Capture the original markup only once. On rapid repeat clicks the check
+  // SVG is already showing, so re-capturing would later "restore" the check
+  // and leave the button stuck on it.
+  if (buttonElement.dataset.originalHtml === undefined) {
+    buttonElement.dataset.originalHtml = buttonElement.innerHTML;
+  }
+  // Cancel any pending restore so the latest click owns the timeout.
+  if (buttonElement._flashTimeout) {
+    clearTimeout(buttonElement._flashTimeout);
+  }
+  buttonElement.classList.add("is-copied");
+  buttonElement.innerHTML =
+    '<svg class="icon-check" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">' +
+    '<path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    "</svg>";
+  buttonElement._flashTimeout = setTimeout(() => {
+    buttonElement.innerHTML = buttonElement.dataset.originalHtml;
+    buttonElement.classList.remove("is-copied");
+    delete buttonElement.dataset.originalHtml;
+    buttonElement._flashTimeout = null;
+  }, 1200);
+}
+
 function bindUi() {
   el.settingsButton.addEventListener("click", () => {
     el.settingsDialog.showModal();
@@ -1747,6 +1828,22 @@ function bindUi() {
   el.copyCgmaPathButton.addEventListener("click", () => {
     copyPathFromElement(el.copyCgmaPathButton, "\\\\fs61\\BizTalkFileShare\\BTS2010\\Common\\Tracking\\CGMA_TSO\\");
   });
+
+  if (el.copyDiffDk1Button) {
+    el.copyDiffDk1Button.addEventListener("click", (event) => {
+      // Header cell has a sort handler bound on #tablesSection; stop the
+      // click from bubbling so the copy button doesn't also re-sort the column.
+      event.stopPropagation();
+      copyDiffColumnForArea(el.copyDiffDk1Button, "DK1");
+    });
+  }
+
+  if (el.copyDiffDk2Button) {
+    el.copyDiffDk2Button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      copyDiffColumnForArea(el.copyDiffDk2Button, "DK2");
+    });
+  }
 
   if (el.refreshButton) {
     el.refreshButton.addEventListener("click", () => {
