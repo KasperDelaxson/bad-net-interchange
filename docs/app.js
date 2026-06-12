@@ -1708,15 +1708,26 @@ function flashCopyButton(buttonElement) {
   if (!buttonElement) {
     return;
   }
-  const originalHTML = buttonElement.innerHTML;
+  // Capture the original markup only once. On rapid repeat clicks the check
+  // SVG is already showing, so re-capturing would later "restore" the check
+  // and leave the button stuck on it.
+  if (buttonElement.dataset.originalHtml === undefined) {
+    buttonElement.dataset.originalHtml = buttonElement.innerHTML;
+  }
+  // Cancel any pending restore so the latest click owns the timeout.
+  if (buttonElement._flashTimeout) {
+    clearTimeout(buttonElement._flashTimeout);
+  }
   buttonElement.classList.add("is-copied");
   buttonElement.innerHTML =
     '<svg class="icon-check" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">' +
     '<path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
     "</svg>";
-  setTimeout(() => {
-    buttonElement.innerHTML = originalHTML;
+  buttonElement._flashTimeout = setTimeout(() => {
+    buttonElement.innerHTML = buttonElement.dataset.originalHtml;
     buttonElement.classList.remove("is-copied");
+    delete buttonElement.dataset.originalHtml;
+    buttonElement._flashTimeout = null;
   }, 1200);
 }
 
